@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel-alpha-skill.vercel.app/strategy-spec.schema.json",
+  "title": "Sentinel Alpha Strategy Specification",
+  "description": "Backtestable, simulation-only strategy spec produced by the sentinel-alpha skill for BNB markets.",
+  "type": "object",
+  "required": [
+    "specVersion",
+    "product",
+    "mode",
+    "asset",
+    "generatedAt",
+    "marketContext",
+    "marketRegime",
+    "decision",
+    "rules",
+    "riskGuard",
+    "backtestSummary",
+    "safetyConstraints",
+    "dataSource"
+  ],
+  "properties": {
+    "specVersion": { "type": "string" },
+    "product": { "const": "Sentinel Alpha Skill" },
+    "mode": { "const": "simulation_only" },
+    "asset": { "type": "string", "examples": ["BNB/USDT"] },
+    "scenario": { "type": "string" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "marketContext": {
+      "type": "object",
+      "required": ["currentPrice", "change24h", "rsi", "macdStatus", "emaTrend", "atrVolatility", "fearGreed"],
+      "properties": {
+        "currentPrice": { "type": "number" },
+        "change24h": { "type": "number" },
+        "rsi": { "type": "number", "minimum": 0, "maximum": 100 },
+        "macdStatus": { "enum": ["Bullish crossover", "Bearish crossover", "Flat momentum"] },
+        "emaTrend": { "enum": ["Above EMA stack", "Below EMA stack", "Mixed EMA stack"] },
+        "atrVolatility": { "enum": ["Low", "Normal", "Elevated", "Extreme"] },
+        "fearGreed": {
+          "type": "object",
+          "required": ["score", "label"],
+          "properties": {
+            "score": { "type": "number", "minimum": 0, "maximum": 100 },
+            "label": { "enum": ["Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"] }
+          }
+        },
+        "indicators": {
+          "type": "object",
+          "properties": {
+            "ema20": { "type": "number" },
+            "ema50": { "type": "number" },
+            "atr": { "type": "number" },
+            "macd": { "type": "number" },
+            "macdSignal": { "type": "number" },
+            "candleCount": { "type": "integer" },
+            "candleSource": { "type": "string" }
+          }
+        }
+      }
+    },
+    "marketRegime": {
+      "type": "object",
+      "required": ["label", "explanation"],
+      "properties": {
+        "label": { "enum": ["Bullish", "Bearish", "Sideways", "High Risk"] },
+        "explanation": { "type": "string" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["action", "confidenceScore", "suggestedTimeframe"],
+      "properties": {
+        "action": { "enum": ["BUY", "WAIT", "EXIT"] },
+        "confidenceScore": { "type": "number", "minimum": 0, "maximum": 100 },
+        "suggestedTimeframe": { "enum": ["1H", "4H"] }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "required": ["entry", "exit", "stopLoss", "positionSizing"],
+      "properties": {
+        "entry": { "type": "string" },
+        "exit": { "type": "string" },
+        "stopLoss": { "type": "string" },
+        "positionSizing": { "type": "string" }
+      }
+    },
+    "riskGuard": {
+      "type": "object",
+      "required": ["status", "blockedReasons", "checks", "principle"],
+      "properties": {
+        "status": { "enum": ["PASSED", "BLOCKED"] },
+        "blockedReasons": { "type": "array", "items": { "type": "string" } },
+        "checks": {
+          "type": "array",
+          "minItems": 5,
+          "items": {
+            "type": "object",
+            "required": ["label", "status", "detail"],
+            "properties": {
+              "label": { "type": "string" },
+              "status": { "enum": ["Pass", "Warning", "Fail"] },
+              "detail": { "type": "string" }
+            }
+          }
+        },
+        "principle": { "const": "No trade is also a valid strategy." }
+      }
+    },
+    "backtestSummary": {
+      "type": "object",
+      "required": ["simulatedReturn", "maxDrawdown", "winRate", "numberOfTrades", "buyHoldReturn"],
+      "properties": {
+        "simulatedReturn": { "type": "number" },
+        "maxDrawdown": { "type": "number" },
+        "winRate": { "type": "number" },
+        "numberOfTrades": { "type": "integer" },
+        "buyHoldReturn": { "type": "number" }
+      }
+    },
+    "safetyConstraints": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 6
+    },
+    "dataSource": {
+      "type": "object",
+      "required": ["type", "marketData", "indicators", "backtest", "note"],
+      "properties": {
+        "type": { "type": "string" },
+        "marketData": { "type": "string" },
+        "indicators": { "type": "string" },
+        "backtest": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

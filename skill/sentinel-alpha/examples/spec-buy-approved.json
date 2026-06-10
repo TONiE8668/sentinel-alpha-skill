@@ -1,0 +1,71 @@
+{
+  "specVersion": "0.3.0-live-strategy",
+  "product": "Sentinel Alpha Skill",
+  "mode": "simulation_only",
+  "asset": "BNB/USDT",
+  "scenario": "Live Market Analysis",
+  "generatedAt": "2026-06-05T09:00:00.000Z",
+  "marketContext": {
+    "currentPrice": 684.42,
+    "change24h": 2.18,
+    "rsi": 58.3,
+    "macdStatus": "Bullish crossover",
+    "emaTrend": "Above EMA stack",
+    "atrVolatility": "Normal",
+    "fearGreed": { "score": 54, "label": "Neutral" },
+    "indicators": {
+      "ema20": 671.15,
+      "ema50": 655.4,
+      "atr": 11.62,
+      "macd": 4.1182,
+      "macdSignal": 2.7741,
+      "candleCount": 160,
+      "candleSource": "cmc_ohlcv_historical"
+    }
+  },
+  "marketRegime": {
+    "label": "Bullish",
+    "explanation": "Trend and momentum agree while RSI is not overheated, creating a cleaner test environment."
+  },
+  "decision": { "action": "BUY", "confidenceScore": 85, "suggestedTimeframe": "4H" },
+  "rules": {
+    "entry": "Enter only after a 4H candle closes above the 20 EMA (671.15) while MACD stays bullish and RSI holds below 65.",
+    "exit": "Exit when price closes below the 20 EMA (671.15) or MACD flips bearish on the 4H chart.",
+    "stopLoss": "Place a simulated stop 1.4x ATR (16.27) below entry, near 668.15; trail only after price moves in favor.",
+    "positionSizing": "Use a small simulated allocation capped at 25% of test capital; no leverage."
+  },
+  "riskGuard": {
+    "status": "PASSED",
+    "blockedReasons": [],
+    "checks": [
+      { "label": "Trend confirmation", "status": "Pass", "detail": "BNB is trading above the EMA stack." },
+      { "label": "Momentum quality", "status": "Pass", "detail": "RSI and MACD support a measured strategy test." },
+      { "label": "Volatility control", "status": "Pass", "detail": "ATR is within an acceptable range for simulated stop sizing." },
+      { "label": "Sentiment risk", "status": "Pass", "detail": "Sentiment is not extreme enough to block the setup." },
+      { "label": "Backtest drawdown", "status": "Pass", "detail": "Recent simulated drawdown stays inside the risk cap." }
+    ],
+    "principle": "No trade is also a valid strategy."
+  },
+  "backtestSummary": {
+    "simulatedReturn": 9.8,
+    "maxDrawdown": 5.4,
+    "winRate": 57,
+    "numberOfTrades": 14,
+    "buyHoldReturn": 6.1
+  },
+  "safetyConstraints": [
+    "Simulation only.",
+    "No wallet connection.",
+    "No live trading.",
+    "No transaction signing.",
+    "No financial advice.",
+    "Market and backtest outputs are for strategy testing only."
+  ],
+  "dataSource": {
+    "type": "coinmarketcap_rest_plus_live_indicators_and_backtest",
+    "marketData": "coinmarketcap_rest",
+    "indicators": "live_candles",
+    "backtest": "live_candles",
+    "note": "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and the backtest are calculated from live candles."
+  }
+}
