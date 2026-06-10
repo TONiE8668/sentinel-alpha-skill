@@ -12,18 +12,41 @@
 
 html {
   min-height: 100%;
-  background: #07090d;
+  background: #06080c;
+  scroll-behavior: smooth;
 }
 
 body {
   min-height: 100%;
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(79, 209, 197, 0.18), transparent 32rem),
-    radial-gradient(circle at 82% 18%, rgba(246, 196, 83, 0.12), transparent 28rem),
-    linear-gradient(135deg, #07090d 0%, #0b0f14 46%, #101116 100%);
+    radial-gradient(ellipse 60rem 38rem at 12% -6%, rgba(79, 209, 197, 0.16), transparent),
+    radial-gradient(ellipse 50rem 32rem at 88% 4%, rgba(246, 196, 83, 0.1), transparent),
+    radial-gradient(ellipse 46rem 40rem at 50% 110%, rgba(99, 102, 241, 0.1), transparent),
+    linear-gradient(160deg, #06080c 0%, #0a0e14 48%, #0d1018 100%);
+  background-attachment: fixed;
   color: #f8fafc;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* Subtle blueprint grid overlay, faded toward the bottom */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 90rem 44rem at 50% 0%, black 28%, transparent 78%);
+  mask-image: radial-gradient(ellipse 90rem 44rem at 50% 0%, black 28%, transparent 78%);
+}
+
+main {
+  position: relative;
+  z-index: 1;
 }
 
 button,
@@ -42,3 +65,17 @@ button:focus-visible {
   background: rgba(79, 209, 197, 0.35);
 }
 
+/* Slim dark scrollbars for the spec JSON viewer */
+pre::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+pre::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+}
+
+pre::-webkit-scrollbar-track {
+  background: transparent;
+}

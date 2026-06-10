@@ -181,6 +181,7 @@ export function SentinelDashboard() {
     <main className="min-h-screen px-4 py-5 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
         <Header />
+        <WhyThisExists />
         <DemoReadout
           marketStatus={liveMarket}
           technicalStatus={liveTechnical}
@@ -241,22 +242,93 @@ export function SentinelDashboard() {
 
 function Header() {
   return (
-    <header className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <header className="relative overflow-hidden rounded-lg border border-white/10 bg-panel/80 p-6 shadow-premium backdrop-blur md:p-8">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-signal/10 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-amber/[0.07] blur-3xl"
+      />
+      <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-normal text-white md:text-4xl">
-            Sentinel Alpha Skill
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-mist">
+            BNB Hack · Track 2 · Strategy Skills
+          </p>
+          <h1 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
+            <span className="bg-gradient-to-r from-white via-white to-signal bg-clip-text text-transparent">
+              Sentinel Alpha
+            </span>{" "}
+            <span className="text-signal/90">Skill</span>
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-mist md:text-base">
-            Risk-first AI strategy skill for BNB markets
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-mist md:text-base">
+            The risk manager for AI trading - turns CoinMarketCap data into
+            backtestable strategy specs and refuses unsafe setups.
           </p>
         </div>
-        <div className="flex w-fit items-center gap-2 rounded-full border border-signal/35 bg-signal/10 px-4 py-2 text-sm font-semibold text-signal">
-          <span className="h-2 w-2 rounded-full bg-signal shadow-[0_0_16px_rgba(79,209,197,0.8)]" />
+        <div className="flex w-fit items-center gap-2 rounded-full border border-signal/35 bg-signal/10 px-4 py-2 text-sm font-semibold text-signal shadow-glow-teal">
+          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-signal shadow-[0_0_16px_rgba(79,209,197,0.9)]" />
           Simulation Mode
         </div>
       </div>
     </header>
+  );
+}
+
+function WhyThisExists() {
+  const cards = [
+    {
+      eyebrow: "The problem",
+      accent: "text-danger",
+      border: "border-t-danger/60",
+      title: "Every AI signal bot says BUY",
+      body: "Crypto is flooded with AI tools engineered to always sound confident. Their reasoning can't be re-tested, and nothing in the loop is allowed to say no. Users don't blow up from missing buy signals - they blow up because no one blocks the bad ones."
+    },
+    {
+      eyebrow: "The approach",
+      accent: "text-signal",
+      border: "border-t-signal/60",
+      title: "A spec you can test, not a tip you must trust",
+      body: "Sentinel Alpha turns CoinMarketCap market data into a backtestable strategy specification: explicit entry, exit, stop-loss, and sizing rules with the actual indicator values, plus a candle-based backtest against Buy & Hold. Anyone can verify it. Nobody has to trust it."
+    },
+    {
+      eyebrow: "The differentiator",
+      accent: "text-amber",
+      border: "border-t-amber/60",
+      title: "An AI with veto power over itself",
+      body: "Five risk guards - trend, momentum, volatility, sentiment, and backtest drawdown - can override a tempting BUY into WAIT with 0% allocation, and the refusal reasons are written into the exported spec. It is the risk manager that professional desks have and retail never gets."
+    }
+  ];
+
+  return (
+    <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
+      <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <h2 className="font-display text-xl font-semibold tracking-tight text-white">
+          Why This Exists
+        </h2>
+        <p className="text-sm text-mist">The problem, in 30 seconds</p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        {cards.map((card) => (
+          <div
+            key={card.eyebrow}
+            className={`rounded-md border border-white/10 border-t-2 bg-white/[0.035] p-5 transition-colors duration-300 hover:bg-white/[0.05] ${card.border}`}
+          >
+            <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${card.accent}`}>
+              {card.eyebrow}
+            </p>
+            <p className="mt-2 font-display text-base font-semibold text-white">{card.title}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">{card.body}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 rounded-md border border-amber/30 bg-amber/[0.06] px-4 py-3 text-sm leading-6 text-slate-300">
+        <span className="font-semibold text-amber">Try it live below:</span> when momentum looks
+        tempting but Fear &amp; Greed sits in an extreme zone, a naive bot buys the dip - Sentinel
+        Alpha refuses, shows its evidence, and records the refusal in the strategy spec.
+      </p>
+    </section>
   );
 }
 
@@ -493,7 +565,12 @@ function MarketSnapshot({
   technicalStatus: TechnicalIndicatorsResponse | null;
 }) {
   const { market } = scenario;
-  const metrics = [
+  const metrics: Array<{
+    label: string;
+    value: string;
+    tone?: "positive" | "negative";
+    meter?: { percent: number; kind: "rsi" | "sentiment" };
+  }> = [
     { label: "Asset", value: market.asset },
     { label: "Current price", value: formatUsd(market.currentPrice) },
     {
@@ -501,13 +578,18 @@ function MarketSnapshot({
       value: formatPercent(market.change24h),
       tone: market.change24h >= 0 ? "positive" : "negative"
     },
-    { label: "RSI", value: market.rsi.toString() },
+    {
+      label: "RSI",
+      value: market.rsi.toString(),
+      meter: { percent: market.rsi, kind: "rsi" }
+    },
     { label: "MACD status", value: market.macdStatus },
     { label: "EMA trend", value: market.emaTrend },
     { label: "ATR volatility", value: market.atrVolatility },
     {
       label: "Fear & Greed",
-      value: `${market.fearGreedScore} - ${market.fearGreedLabel}`
+      value: `${market.fearGreedScore} - ${market.fearGreedLabel}`,
+      meter: { percent: market.fearGreedScore, kind: "sentiment" }
     }
   ];
 
@@ -526,6 +608,7 @@ function MarketSnapshot({
             <p className={`mt-2 text-lg font-semibold ${metric.tone === "negative" ? "text-danger" : metric.tone === "positive" ? "text-signal" : "text-white"}`}>
               {metric.value}
             </p>
+            {metric.meter && <MeterBar percent={metric.meter.percent} kind={metric.meter.kind} />}
           </div>
         ))}
       </div>
@@ -587,15 +670,28 @@ function StrategyOutput({
       : strategy.decision === "EXIT"
         ? "text-danger"
         : "text-amber";
+  const decisionGlow =
+    strategy.decision === "BUY"
+      ? "0 0 32px rgba(79,209,197,0.45)"
+      : strategy.decision === "EXIT"
+        ? "0 0 32px rgba(255,107,107,0.45)"
+        : "0 0 32px rgba(246,196,83,0.4)";
 
   return (
     <Card title="AI Strategy Output" eyebrow="Backtestable strategy spec">
       <div className="grid gap-4 md:grid-cols-[0.75fr_1.25fr]">
         <div className="rounded-md border border-white/10 bg-ink/70 p-5">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Decision</p>
-          <p className={`mt-3 text-5xl font-bold ${decisionTone}`}>{strategy.decision}</p>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p
+              className={`font-display text-5xl font-bold tracking-tight ${decisionTone}`}
+              style={{ textShadow: decisionGlow }}
+            >
+              {strategy.decision}
+            </p>
+            <ConfidenceRing value={strategy.confidenceScore} decision={strategy.decision} />
+          </div>
           <div className="mt-5 space-y-3 text-sm">
-            <InfoLine label="Confidence" value={`${strategy.confidenceScore}/100`} />
             <InfoLine label="Timeframe" value={strategy.suggestedTimeframe} />
             <InfoLine label="Risk state" value={riskBlocked ? "Blocked" : "Approved"} />
           </div>
@@ -693,7 +789,14 @@ function RiskGuardPanel({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Status</p>
-          <p className={`mt-2 text-4xl font-bold ${blocked ? "text-danger" : "text-signal"}`}>
+          <p
+            className={`mt-2 font-display text-4xl font-bold tracking-tight ${blocked ? "text-danger" : "text-signal"}`}
+            style={{
+              textShadow: blocked
+                ? "0 0 30px rgba(255,107,107,0.45)"
+                : "0 0 30px rgba(79,209,197,0.45)"
+            }}
+          >
             {status}
           </p>
         </div>
@@ -927,27 +1030,103 @@ function copyWithTextareaFallback(value: string) {
 }
 
 function PlaceholderChart({ points }: { points: number[] }) {
+  const width = 720;
+  const height = 220;
+  const padX = 14;
+  const padY = 22;
   const min = Math.min(...points);
   const max = Math.max(...points);
-  const range = Math.max(max - min, 1);
+  const range = Math.max(max - min, 0.5);
+  const innerW = width - padX * 2;
+  const innerH = height - padY * 2;
+
+  const toX = (index: number) =>
+    padX + (points.length > 1 ? (index / (points.length - 1)) * innerW : innerW / 2);
+  const toY = (value: number) => padY + (1 - (value - min) / range) * innerH;
+
+  const linePath = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${toX(index).toFixed(1)} ${toY(point).toFixed(1)}`)
+    .join(" ");
+  const areaPath = `${linePath} L ${toX(points.length - 1).toFixed(1)} ${height - padY} L ${toX(0).toFixed(1)} ${height - padY} Z`;
+
+  const start = points[0];
+  const end = points[points.length - 1];
+  const up = end >= start;
+  const startY = toY(start);
+  const endX = toX(points.length - 1);
+  const endY = toY(end);
+  const stroke = up ? "#4fd1c5" : "#ff8585";
+  const gradientId = up ? "equityFillUp" : "equityFillDown";
 
   return (
-    <div className="mt-5 h-56 rounded-md border border-white/10 bg-ink/70 p-4">
-      <div className="flex h-full items-end gap-2">
-        {points.map((point, index) => {
-          const height = 18 + ((point - min) / range) * 78;
-          const isLast = index === points.length - 1;
+    <div className="relative mt-5 overflow-hidden rounded-md border border-white/10 bg-ink/70 p-3">
+      <div className="absolute left-4 top-3 z-10 text-[11px] font-semibold uppercase tracking-[0.16em] text-mist">
+        Equity curve · 100 = starting capital
+      </div>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-56 w-full"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`Equity curve from ${start} to ${end}`}
+      >
+        <defs>
+          <linearGradient id="equityFillUp" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#4fd1c5" stopOpacity="0.34" />
+            <stop offset="100%" stopColor="#4fd1c5" stopOpacity="0.02" />
+          </linearGradient>
+          <linearGradient id="equityFillDown" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff8585" stopOpacity="0.30" />
+            <stop offset="100%" stopColor="#ff8585" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
 
-          return (
-            <div key={`${point}-${index}`} className="flex h-full flex-1 items-end">
-              <div
-                className={`w-full rounded-t-sm ${isLast ? "bg-amber" : "bg-signal/75"}`}
-                style={{ height: `${height}%` }}
-                aria-label={`Equity point ${index + 1}: ${point}`}
-              />
-            </div>
-          );
-        })}
+        {[0.25, 0.5, 0.75].map((fraction) => (
+          <line
+            key={fraction}
+            x1={padX}
+            x2={width - padX}
+            y1={padY + innerH * fraction}
+            y2={padY + innerH * fraction}
+            stroke="rgba(148,163,184,0.1)"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+
+        <line
+          x1={padX}
+          x2={width - padX}
+          y1={startY}
+          y2={startY}
+          stroke="rgba(246,196,83,0.5)"
+          strokeWidth="1"
+          strokeDasharray="5 5"
+          vectorEffect="non-scaling-stroke"
+        />
+
+        <path d={areaPath} fill={`url(#${gradientId})`} />
+        <path
+          d={linePath}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+          strokeDasharray="1200"
+          className="animate-draw-line"
+        />
+
+        <circle cx={endX} cy={endY} r="9" fill={stroke} opacity="0.2" />
+        <circle cx={endX} cy={endY} r="4" fill={stroke} />
+      </svg>
+      <div className="absolute bottom-3 right-4 z-10 rounded border border-white/10 bg-ink/85 px-2.5 py-1 text-xs font-semibold text-white">
+        {end.toFixed(1)}{" "}
+        <span className={up ? "text-signal" : "text-danger"}>
+          ({up ? "+" : ""}
+          {(end - start).toFixed(1)})
+        </span>
       </div>
     </div>
   );
@@ -963,13 +1142,75 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
+    <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur transition-colors duration-300 hover:border-white/20 md:p-6">
       <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
+        <h2 className="font-display text-xl font-semibold tracking-tight text-white">{title}</h2>
         {eyebrow && <p className="text-sm text-mist">{eyebrow}</p>}
       </div>
       {children}
     </section>
+  );
+}
+
+function MeterBar({ percent, kind }: { percent: number; kind: "rsi" | "sentiment" }) {
+  const clamped = Math.min(Math.max(percent, 0), 100);
+  const gradient =
+    kind === "rsi"
+      ? "bg-gradient-to-r from-signal/80 via-amber/80 to-danger/80"
+      : "bg-gradient-to-r from-danger/80 via-amber/80 to-signal/80";
+
+  return (
+    <div className="relative mt-3" aria-hidden>
+      <div className={`h-1.5 rounded-full ${gradient} opacity-80`} />
+      {kind === "rsi" && (
+        <>
+          <span className="absolute -top-0.5 left-[30%] h-2.5 w-px bg-white/40" />
+          <span className="absolute -top-0.5 left-[70%] h-2.5 w-px bg-white/40" />
+        </>
+      )}
+      <span
+        className="absolute -top-[3px] h-3 w-3 -translate-x-1/2 rounded-full border-2 border-white bg-ink shadow-[0_0_10px_rgba(255,255,255,0.45)]"
+        style={{ left: `${clamped}%` }}
+      />
+    </div>
+  );
+}
+
+function ConfidenceRing({
+  value,
+  decision
+}: {
+  value: number;
+  decision: "BUY" | "WAIT" | "EXIT";
+}) {
+  const radius = 30;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(Math.max(value, 0), 100) / 100;
+  const stroke =
+    decision === "BUY" ? "#4fd1c5" : decision === "EXIT" ? "#ff6b6b" : "#f6c453";
+
+  return (
+    <div className="relative h-[76px] w-[76px] shrink-0" aria-label={`Confidence ${value} of 100`}>
+      <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
+        <circle cx="38" cy="38" r={radius} fill="none" stroke="rgba(148,163,184,0.16)" strokeWidth="6" />
+        <circle
+          cx="38"
+          cy="38"
+          r={radius}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress)}
+          style={{ transition: "stroke-dashoffset 0.8s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-display text-lg font-bold text-white">{value}</span>
+        <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-mist">conf</span>
+      </div>
+    </div>
   );
 }
 
@@ -997,9 +1238,13 @@ function StatusPill({ status }: { status: GuardCheckStatus }) {
     Warning: "border-amber/40 bg-amber/10 text-amber",
     Fail: "border-danger/40 bg-danger/10 text-danger"
   }[status];
+  const icon = { Pass: "✓", Warning: "!", Fail: "✕" }[status];
 
   return (
-    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${className}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${className}`}
+    >
+      <span aria-hidden>{icon}</span>
       {status}
     </span>
   );
