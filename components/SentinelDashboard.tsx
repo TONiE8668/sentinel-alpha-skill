@@ -303,12 +303,9 @@ function WhyThisExists() {
 
   return (
     <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
-      <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <h2 className="font-display text-xl font-semibold tracking-tight text-white">
-          Why This Exists
-        </h2>
-        <p className="text-sm text-mist">The problem, in 30 seconds</p>
-      </div>
+      <h2 className="mb-5 font-display text-xl font-semibold tracking-tight text-white">
+        Why This Exists
+      </h2>
       <div className="grid gap-3 md:grid-cols-3">
         {cards.map((card) => (
           <div
