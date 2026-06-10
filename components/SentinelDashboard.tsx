@@ -939,7 +939,7 @@ function PlaceholderChart({ points }: { points: number[] }) {
           const isLast = index === points.length - 1;
 
           return (
-            <div key={`${point}-${index}`} className="flex flex-1 items-end">
+            <div key={`${point}-${index}`} className="flex h-full flex-1 items-end">
               <div
                 className={`w-full rounded-t-sm ${isLast ? "bg-amber" : "bg-signal/75"}`}
                 style={{ height: `${height}%` }}
