@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { scenarios } from "@/lib/fixtures";
 import {
   applyRiskGuardDecision,
@@ -18,6 +18,7 @@ import type {
   GuardCheckStatus,
   MarketRegime,
   MarketSnapshotResponse,
+  RiskGuard,
   Scenario,
   ScenarioId,
   StrategySpecification,
@@ -25,6 +26,11 @@ import type {
 } from "@/types/strategy";
 
 const scenarioOrder: ScenarioId[] = ["conservative", "rejected"];
+
+// Staged reveal: 1..5 sweep the guards one by one, then the verdict stamps in.
+const REVEAL_GUARD_COUNT = 5;
+const REVEAL_DECISION = REVEAL_GUARD_COUNT + 1;
+const REVEAL_DONE = REVEAL_DECISION + 1;
 
 export function SentinelDashboard() {
   const [activeScenarioId, setActiveScenarioId] = useState<ScenarioId>("conservative");
@@ -140,6 +146,78 @@ export function SentinelDashboard() {
     void loadBacktest(scenario.strategy.suggestedTimeframe);
   }, [loadBacktest, loadTechnicalIndicators, scenario.strategy.suggestedTimeframe]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void loadMarketSnapshot();
+    }, 180_000);
+    return () => window.clearInterval(interval);
+  }, [loadMarketSnapshot]);
+
+  const [revealStage, setRevealStage] = useState(0);
+
+  useEffect(() => {
+    setRevealStage(0);
+  }, [activeScenarioId]);
+
+  useEffect(() => {
+    if (revealStage >= REVEAL_DONE) {
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => setRevealStage((stage) => stage + 1),
+      revealStage === 0 ? 500 : 380
+    );
+    return () => window.clearTimeout(timer);
+  }, [revealStage]);
+
+  const snapshotRef = useRef<HTMLElement | null>(null);
+  const refusalRef = useRef<HTMLDivElement | null>(null);
+  const specRef = useRef<HTMLDivElement | null>(null);
+  const demoRunIdRef = useRef(0);
+  const [demoCaption, setDemoCaption] = useState<string | null>(null);
+
+  const stopJudgeDemo = useCallback(() => {
+    demoRunIdRef.current += 1;
+    setDemoCaption(null);
+  }, []);
+
+  const runJudgeDemo = useCallback(async () => {
+    const runId = ++demoRunIdRef.current;
+    const stillRunning = () => demoRunIdRef.current === runId;
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setActiveScenarioId("conservative");
+    setDemoCaption("1/5 · Live market analysis - BNB quote, sentiment, and indicators from real data");
+    await wait(8000);
+    if (!stillRunning()) return;
+
+    setDemoCaption("2/5 · The strategy output - every rule cites the indicator values on screen");
+    snapshotRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    await wait(8000);
+    if (!stillRunning()) return;
+
+    setDemoCaption("3/5 · Stress test - watch the five risk guards sweep an overheated market");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setActiveScenarioId("rejected");
+    await wait(8000);
+    if (!stillRunning()) return;
+
+    setDemoCaption("4/5 · The refusal - blocked evidence is shown and allocation stays at 0%");
+    refusalRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    await wait(8000);
+    if (!stillRunning()) return;
+
+    setDemoCaption("5/5 · The artifact - a backtested, exportable strategy specification");
+    specRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    await wait(9000);
+    if (!stillRunning()) return;
+
+    setDemoCaption(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   const regime = useMemo(() => classifyMarketRegime(displayScenario.market), [displayScenario]);
   const riskGuard = useMemo(
     () => buildRiskGuard(displayScenario.market, displayScenario.backtest),
@@ -180,12 +258,17 @@ export function SentinelDashboard() {
   return (
     <main className="min-h-screen px-4 py-5 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <Header />
-        <WhyThisExists />
-        <DemoReadout
+        <CommandCenter
+          market={displayScenario.market}
+          strategy={finalScenario.strategy}
+          riskGuard={riskGuard}
+          backtest={displayScenario.backtest}
           marketStatus={liveMarket}
           technicalStatus={liveTechnical}
-          backtestStatus={liveBacktest}
+          isLiveScenario={isLiveScenario}
+          revealStage={revealStage}
+          onRunJudgeDemo={() => void runJudgeDemo()}
+          demoRunning={demoCaption !== null}
         />
         <ScenarioControls
           activeScenarioId={activeScenarioId}
@@ -203,7 +286,10 @@ export function SentinelDashboard() {
           }}
         />
 
-        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+        <section
+          ref={snapshotRef}
+          className="grid scroll-mt-5 gap-5 xl:grid-cols-[1.05fr_0.95fr]"
+        >
           <MarketSnapshot
             scenario={displayScenario}
             marketStatus={isLiveScenario ? liveMarket : null}
@@ -212,12 +298,14 @@ export function SentinelDashboard() {
           <StrategyOutput scenario={finalScenario} riskBlocked={riskGuard.status === "BLOCKED"} />
         </section>
 
-        <RefusalNarrativePanel
-          scenario={finalScenario}
-          riskGuardStatus={riskGuard.status}
-          blockedReasons={riskGuard.blockedReasons}
-          regime={regime.regime}
-        />
+        <div ref={refusalRef}>
+          <RefusalNarrativePanel
+            scenario={finalScenario}
+            riskGuardStatus={riskGuard.status}
+            blockedReasons={riskGuard.blockedReasons}
+            regime={regime.regime}
+          />
+        </div>
 
         <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <MarketRegimePanel regime={regime.regime} explanation={regime.explanation} />
@@ -234,9 +322,31 @@ export function SentinelDashboard() {
           isLoadingBacktest={isLiveScenario && isLoadingBacktest}
           isFixtureScenario={!isLiveScenario}
         />
-        <StrategySpecificationPanel specification={strategySpecification} />
+        <div ref={specRef} className="scroll-mt-5">
+          <StrategySpecificationPanel specification={strategySpecification} />
+        </div>
+        <DemoReadout
+          marketStatus={liveMarket}
+          technicalStatus={liveTechnical}
+          backtestStatus={liveBacktest}
+        />
+        <WhyThisExists />
         <Footer />
       </div>
+
+      {demoCaption && (
+        <div className="fixed bottom-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 items-center gap-3 rounded-full border border-signal/40 bg-ink/95 px-5 py-3 shadow-premium backdrop-blur">
+          <span className="h-2 w-2 shrink-0 animate-pulse-dot rounded-full bg-signal" />
+          <p className="flex-1 text-sm font-medium text-slate-200">{demoCaption}</p>
+          <button
+            type="button"
+            onClick={stopJudgeDemo}
+            className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-mist transition hover:border-white/30 hover:text-white"
+          >
+            Stop
+          </button>
+        </div>
+      )}
     </main>
   );
 }
@@ -289,9 +399,58 @@ function Footer() {
   );
 }
 
-function Header() {
+function CommandCenter({
+  market,
+  strategy,
+  riskGuard,
+  backtest,
+  marketStatus,
+  technicalStatus,
+  isLiveScenario,
+  revealStage,
+  onRunJudgeDemo,
+  demoRunning
+}: {
+  market: Scenario["market"];
+  strategy: Scenario["strategy"];
+  riskGuard: RiskGuard;
+  backtest: BacktestResult;
+  marketStatus: MarketSnapshotResponse | null;
+  technicalStatus: TechnicalIndicatorsResponse | null;
+  isLiveScenario: boolean;
+  revealStage: number;
+  onRunJudgeDemo: () => void;
+  demoRunning: boolean;
+}) {
+  const blocked = riskGuard.status === "BLOCKED";
+  const decisionRevealed = revealStage >= REVEAL_DECISION;
+  const decisionTone =
+    strategy.decision === "BUY"
+      ? "text-signal"
+      : strategy.decision === "EXIT"
+        ? "text-danger"
+        : "text-amber";
+  const allocationFull = strategy.decision === "BUY" && !blocked;
+  const guardShortValues = [
+    market.emaTrend.replace(" EMA stack", " stack"),
+    `RSI ${market.rsi}`,
+    `ATR ${market.atrVolatility}`,
+    `F&G ${market.fearGreedScore}`,
+    `DD ${Math.abs(backtest.maxDrawdown).toFixed(1)}%`
+  ];
+  const failedGuards = riskGuard.checks.filter((check) => check.status === "Fail").length;
+  const candleSourceShort = technicalStatus?.ok
+    ? {
+        cmc_ohlcv_historical: "CMC candles",
+        binance_public_klines: "Binance candles",
+        okx_public_candles: "OKX candles",
+        kucoin_public_candles: "KuCoin candles",
+        local_fixture_candles: "fixture candles"
+      }[technicalStatus.data.source]
+    : "loading candles";
+
   return (
-    <header className="relative overflow-hidden rounded-lg border border-white/10 bg-panel/80 p-6 shadow-premium backdrop-blur md:p-8">
+    <header className="relative overflow-hidden rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-signal/10 blur-3xl"
@@ -300,28 +459,230 @@ function Header() {
         aria-hidden
         className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-amber/[0.07] blur-3xl"
       />
-      <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-mist">
-            BNB Hack · Track 2 · Strategy Skills
-          </p>
-          <h1 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
-            <span className="bg-gradient-to-r from-white via-white to-signal bg-clip-text text-transparent">
-              Sentinel Alpha
-            </span>{" "}
+
+      <div className="relative mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
+            <span className="text-white">Sentinel Alpha</span>{" "}
             <span className="text-signal/90">Skill</span>
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-mist md:text-base">
-            The risk manager for AI trading - turns CoinMarketCap data into
-            backtestable strategy specs and refuses unsafe setups.
-          </p>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-mist">
+            BNB Hack · Track 2
+          </span>
+          <span className="flex items-center gap-2 rounded-full border border-signal/35 bg-signal/10 px-3 py-1 text-xs font-semibold text-signal">
+            <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-signal" />
+            Simulation Mode
+          </span>
         </div>
-        <div className="flex w-fit items-center gap-2 rounded-full border border-signal/35 bg-signal/10 px-4 py-2 text-sm font-semibold text-signal shadow-glow-teal">
-          <span className="h-2 w-2 animate-pulse-dot rounded-full bg-signal shadow-[0_0_16px_rgba(79,209,197,0.9)]" />
-          Simulation Mode
+        <div className="flex items-center gap-2 text-xs font-medium text-mist">
+          <span
+            className={`h-2 w-2 animate-pulse-dot rounded-full ${marketStatus?.ok ? "bg-signal shadow-[0_0_12px_rgba(79,209,197,0.9)]" : "bg-amber"}`}
+          />
+          {marketStatus?.ok ? (
+            <span>
+              live · CMC quote + {candleSourceShort} · updated{" "}
+              <LiveTicker fetchedAt={marketStatus.data.fetchedAt} />
+            </span>
+          ) : (
+            <span>{marketStatus === null ? "connecting to live data..." : "fixture fallback mode"}</span>
+          )}
         </div>
       </div>
+
+      <div className="relative grid gap-3 md:grid-cols-3">
+        <div className="rounded-md border border-white/10 bg-ink/70 p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">
+              {market.asset}
+            </p>
+            <p className={`text-sm font-semibold ${market.change24h >= 0 ? "text-signal" : "text-danger"}`}>
+              {formatPercent(market.change24h)} · 24h
+            </p>
+          </div>
+          <p className="mt-2 font-display text-4xl font-bold tracking-tight text-white">
+            {formatUsd(market.currentPrice)}
+          </p>
+          <PriceSparkline points={backtest.chartPoints} />
+          <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-mist/80">
+            Backtest equity · {isLiveScenario ? "live candles" : "fixture stress test"}
+          </p>
+        </div>
+
+        <div className="relative rounded-md border border-white/10 bg-ink/70 p-5">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">AI decision</p>
+          {decisionRevealed ? (
+            <>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <div className="relative">
+                  <p
+                    className={`font-display text-4xl font-bold tracking-tight ${decisionTone} animate-fade-up`}
+                  >
+                    {strategy.decision}
+                  </p>
+                  {blocked && (
+                    <span className="absolute -right-4 -top-3 animate-stamp-in rounded border-2 border-danger px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.2em] text-danger">
+                      Blocked
+                    </span>
+                  )}
+                </div>
+                <ConfidenceRing value={strategy.confidenceScore} decision={strategy.decision} />
+              </div>
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs font-medium text-mist">
+                  <span className="uppercase tracking-[0.14em]">Simulated allocation</span>
+                  <span className={allocationFull ? "text-signal" : "text-slate-200"}>
+                    {allocationFull ? "25% cap" : "0%"}
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ease-out ${allocationFull ? "bg-signal" : "bg-danger"}`}
+                    style={{ width: allocationFull ? "100%" : "0%" }}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="animate-pulse font-display text-3xl font-bold tracking-tight text-amber">
+                  Analyzing...
+                </p>
+                <div className="h-[76px] w-[76px] shrink-0 rounded-full border-4 border-white/10 border-t-amber/70 animate-spin" />
+              </div>
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs font-medium text-mist">
+                  <span className="uppercase tracking-[0.14em]">Simulated allocation</span>
+                  <span className="text-amber">pending guards</span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full w-full animate-pulse rounded-full bg-amber/60" />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-md border border-white/10 bg-ink/70 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Risk guards</p>
+            {decisionRevealed ? (
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] ${blocked ? "border-danger/45 bg-danger/10 text-danger" : "border-signal/45 bg-signal/10 text-signal"} animate-fade-up`}
+              >
+                {blocked ? `${failedGuards} blocked` : "All passed"}
+              </span>
+            ) : (
+              <span className="animate-pulse rounded-full border border-amber/40 bg-amber/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] text-amber">
+                Scanning
+              </span>
+            )}
+          </div>
+          <div className="mt-3 space-y-2">
+            {riskGuard.checks.map((check, index) => {
+              const revealed = revealStage >= index + 1;
+              const dotClass =
+                check.status === "Fail"
+                  ? "bg-danger shadow-[0_0_10px_rgba(255,107,107,0.8)]"
+                  : check.status === "Warning"
+                    ? "bg-amber"
+                    : "bg-signal";
+              const valueClass =
+                check.status === "Fail"
+                  ? "text-danger"
+                  : check.status === "Warning"
+                    ? "text-amber"
+                    : "text-signal";
+
+              return (
+                <div key={check.label} className="flex items-center justify-between gap-3 text-[13px]">
+                  <span className="flex items-center gap-2 text-slate-300">
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${revealed ? dotClass : "animate-pulse bg-white/25"}`}
+                    />
+                    {check.label}
+                  </span>
+                  {revealed ? (
+                    <span className={`animate-guard-in font-semibold ${valueClass}`}>
+                      {guardShortValues[index]}
+                    </span>
+                  ) : (
+                    <span className="animate-pulse text-mist/60">scanning...</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={onRunJudgeDemo}
+          disabled={demoRunning}
+          className="rounded-md border border-signal/50 bg-signal/10 px-5 py-2.5 text-sm font-semibold text-signal shadow-glow-teal transition hover:bg-signal/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {demoRunning ? "Demo running..." : "▶ Run judge demo · 45s"}
+        </button>
+        <p className="text-xs leading-5 text-mist">
+          Auto-plays the full story: live analysis → risk-guard stress test → the refusal →
+          the exportable strategy spec. No wallet, no execution - the risk manager for AI trading.
+        </p>
+      </div>
     </header>
+  );
+}
+
+function LiveTicker({ fetchedAt }: { fetchedAt: string }) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setTick((value) => value + 1), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const seconds = Math.max(0, Math.round((Date.now() - new Date(fetchedAt).getTime()) / 1000));
+  const text =
+    seconds < 60 ? `${seconds}s ago` : `${Math.floor(seconds / 60)}m ${seconds % 60}s ago`;
+
+  return <span className="font-semibold text-slate-200">{text}</span>;
+}
+
+function PriceSparkline({ points }: { points: number[] }) {
+  if (points.length < 2) {
+    return null;
+  }
+
+  const width = 240;
+  const height = 48;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = Math.max(max - min, 0.5);
+  const toX = (index: number) => (index / (points.length - 1)) * width;
+  const toY = (value: number) => 4 + (1 - (value - min) / range) * (height - 8);
+  const path = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${toX(index).toFixed(1)} ${toY(point).toFixed(1)}`)
+    .join(" ");
+  const up = points[points.length - 1] >= points[0];
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="mt-3 h-12 w-full"
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <path
+        d={path}
+        fill="none"
+        stroke={up ? "#4fd1c5" : "#ff8585"}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
   );
 }
 

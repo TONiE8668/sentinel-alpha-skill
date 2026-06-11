@@ -16,6 +16,7 @@ test("dashboard loads and demo controls respond", async ({ page }) => {
 
   await expect(page).toHaveTitle(/Sentinel Alpha Skill/);
   await expect(page.getByRole("heading", { name: "Sentinel Alpha Skill" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Run judge demo/i })).toBeVisible();
   await expect(page.getByText("Live System Status")).toBeVisible();
   await expect(page.getByText("Strategy Specification JSON")).toBeVisible();
   await expect(

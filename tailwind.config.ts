@@ -40,12 +40,23 @@ const config: Config = {
         "draw-line": {
           "0%": { strokeDashoffset: "1200" },
           "100%": { strokeDashoffset: "0" }
+        },
+        "stamp-in": {
+          "0%": { opacity: "0", transform: "scale(2) rotate(-14deg)" },
+          "55%": { opacity: "1", transform: "scale(0.92) rotate(-7deg)" },
+          "100%": { opacity: "1", transform: "scale(1) rotate(-8deg)" }
+        },
+        "guard-in": {
+          "0%": { opacity: "0", transform: "translateX(-8px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" }
         }
       },
       animation: {
         "fade-up": "fade-up 0.6s ease-out both",
         "pulse-dot": "pulse-dot 2.2s ease-in-out infinite",
-        "draw-line": "draw-line 1.6s ease-out both"
+        "draw-line": "draw-line 1.6s ease-out both",
+        "stamp-in": "stamp-in 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both",
+        "guard-in": "guard-in 0.3s ease-out both"
       }
     }
   },
