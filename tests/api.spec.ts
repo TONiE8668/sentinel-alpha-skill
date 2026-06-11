@@ -12,6 +12,15 @@ test("health endpoint exposes safe deployment status", async ({ request }) => {
   expect(payload.safety.transactionSigning).toBe(false);
 });
 
+test("strategy spec schema is served at its $id URL", async ({ request }) => {
+  const response = await request.get("/strategy-spec.schema.json");
+  expect(response.ok()).toBe(true);
+
+  const payload = await response.json();
+  expect(payload.$id).toBe("https://sentinel-alpha-skill.vercel.app/strategy-spec.schema.json");
+  expect(payload.title).toBe("Sentinel Alpha Strategy Specification");
+});
+
 test("submission manifest documents the judge moment", async ({ request }) => {
   const response = await request.get("/api/submission-manifest");
   expect(response.ok()).toBe(true);

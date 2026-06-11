@@ -7,6 +7,7 @@ user-invocable: true
 allowed-tools:
   - mcp__cmc-mcp__get_crypto_quotes_latest
   - mcp__cmc-mcp__get_global_metrics_latest
+  - mcp__cmc-mcp__get_crypto_technical_analysis
   - mcp__cmc-mcp__get_crypto_marketcap_technical_analysis
   - mcp__cmc-mcp__search_cryptos
 ---
@@ -31,8 +32,9 @@ Use CoinMarketCap as the primary data source:
 3. **OHLCV candles** — CMC REST `/v2/cryptocurrency/ohlcv/historical` (interval `hourly`)
    when the API plan allows it. Aggregate 4 hourly candles into one 4H candle. You need at
    least 60 candles on the working timeframe (1H or 4H; default 4H).
-4. **Technical indicators** — prefer CMC-provided technical analysis when available;
-   otherwise compute from candles (Step 2).
+4. **Technical indicators** — prefer CMC-provided technical analysis when available
+   (`get_crypto_technical_analysis` for BNB, `get_crypto_marketcap_technical_analysis`
+   for market-wide context); otherwise compute from candles (Step 2).
 
 If a data source is unavailable, fall back transparently and record the substitution in
 the final spec's `dataSource` block. Never silently present fallback data as live data.
@@ -102,11 +104,16 @@ reasons), `backtestSummary`, `safetyConstraints`, and `dataSource` provenance.
 
 ## Step 8. Backtest the spec
 
-To validate the spec on historical candles (same timeframe, >= 100 candles):
+To validate the spec on historical candles (same timeframe, >= 70 candles: 60 warm-up
+plus at least 10 tradable):
 
 - Start flat with 100 units of test capital, no leverage, no shorting.
-- Enter at candle close when the Step 4 BUY conditions hold; exit when close < EMA20, or
-  MACD flips bearish, or RSI > 75, or ATR >= 4.5%.
+- Enter at candle close when close > EMA20 > EMA50, the MACD line is above its signal
+  line, RSI < 70, and ATR < 3% of price. The entry gate is deliberately stricter than
+  the Step 4 decision gate: it only enters in Low/Normal volatility and compares MACD
+  to its signal directly, without the 0.05 display deadband.
+- Exit when close < EMA20, or the MACD line drops below its signal line, or RSI > 75,
+  or ATR >= 4.5%.
 - Apply a 0.1% transaction cost per side.
 - Report: total return, max drawdown, win rate, trade count, exposure time, and Buy & Hold
   return over the same window.

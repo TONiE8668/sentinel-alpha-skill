@@ -175,9 +175,9 @@ export function buildRiskGuard(market: MarketSnapshot, backtest: BacktestResult)
     {
       label: "Momentum quality",
       status:
-        market.rsi > 70 || market.macdStatus === "Bearish crossover" ? "Fail" : "Pass",
+        market.rsi >= 70 || market.macdStatus === "Bearish crossover" ? "Fail" : "Pass",
       detail:
-        market.rsi > 70 || market.macdStatus === "Bearish crossover"
+        market.rsi >= 70 || market.macdStatus === "Bearish crossover"
           ? "Momentum is stretched or turning against the setup."
           : "RSI and MACD support a measured strategy test."
     },

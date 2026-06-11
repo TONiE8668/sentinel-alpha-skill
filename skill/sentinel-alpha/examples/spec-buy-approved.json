@@ -12,7 +12,10 @@
     "macdStatus": "Bullish crossover",
     "emaTrend": "Above EMA stack",
     "atrVolatility": "Normal",
-    "fearGreed": { "score": 54, "label": "Neutral" },
+    "fearGreed": {
+      "score": 54,
+      "label": "Neutral"
+    },
     "indicators": {
       "ema20": 671.15,
       "ema50": 655.4,
@@ -27,7 +30,11 @@
     "label": "Bullish",
     "explanation": "Trend and momentum agree while RSI is not overheated, creating a cleaner test environment."
   },
-  "decision": { "action": "BUY", "confidenceScore": 85, "suggestedTimeframe": "4H" },
+  "decision": {
+    "action": "BUY",
+    "confidenceScore": 90,
+    "suggestedTimeframe": "4H"
+  },
   "rules": {
     "entry": "Enter only after a 4H candle closes above the 20 EMA (671.15) while MACD stays bullish and RSI holds below 65.",
     "exit": "Exit when price closes below the 20 EMA (671.15) or MACD flips bearish on the 4H chart.",
@@ -38,11 +45,31 @@
     "status": "PASSED",
     "blockedReasons": [],
     "checks": [
-      { "label": "Trend confirmation", "status": "Pass", "detail": "BNB is trading above the EMA stack." },
-      { "label": "Momentum quality", "status": "Pass", "detail": "RSI and MACD support a measured strategy test." },
-      { "label": "Volatility control", "status": "Pass", "detail": "ATR is within an acceptable range for simulated stop sizing." },
-      { "label": "Sentiment risk", "status": "Pass", "detail": "Sentiment is not extreme enough to block the setup." },
-      { "label": "Backtest drawdown", "status": "Pass", "detail": "Recent simulated drawdown stays inside the risk cap." }
+      {
+        "label": "Trend confirmation",
+        "status": "Pass",
+        "detail": "BNB is trading above the EMA stack."
+      },
+      {
+        "label": "Momentum quality",
+        "status": "Pass",
+        "detail": "RSI and MACD support a measured strategy test."
+      },
+      {
+        "label": "Volatility control",
+        "status": "Pass",
+        "detail": "ATR is within an acceptable range for simulated stop sizing."
+      },
+      {
+        "label": "Sentiment risk",
+        "status": "Pass",
+        "detail": "Sentiment is not extreme enough to block the setup."
+      },
+      {
+        "label": "Backtest drawdown",
+        "status": "Pass",
+        "detail": "Recent simulated drawdown stays inside the risk cap."
+      }
     ],
     "principle": "No trade is also a valid strategy."
   },
@@ -66,6 +93,6 @@
     "marketData": "coinmarketcap_rest",
     "indicators": "live_candles",
     "backtest": "live_candles",
-    "note": "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and the backtest are calculated from live candles."
+    "note": "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and the backtest are calculated from live candles. If CMC OHLCV is unavailable, candle-based calculations transparently use the public BNBUSDT fallback."
   }
 }

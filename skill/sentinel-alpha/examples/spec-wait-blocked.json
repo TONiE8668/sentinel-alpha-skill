@@ -7,12 +7,15 @@
   "generatedAt": "2026-06-10T02:04:54.527Z",
   "marketContext": {
     "currentPrice": 591.72,
-    "change24h": -1.0,
+    "change24h": -1,
     "rsi": 71.4,
     "macdStatus": "Bullish crossover",
     "emaTrend": "Above EMA stack",
     "atrVolatility": "Normal",
-    "fearGreed": { "score": 15, "label": "Extreme Fear" },
+    "fearGreed": {
+      "score": 15,
+      "label": "Extreme Fear"
+    },
     "indicators": {
       "ema20": 586.9,
       "ema50": 579.73,
@@ -27,7 +30,11 @@
     "label": "Sideways",
     "explanation": "Signals are mixed, so the skill waits for cleaner confirmation before approving a new trade."
   },
-  "decision": { "action": "WAIT", "confidenceScore": 45, "suggestedTimeframe": "4H" },
+  "decision": {
+    "action": "WAIT",
+    "confidenceScore": 55,
+    "suggestedTimeframe": "4H"
+  },
   "rules": {
     "entry": "Do not enter until trend, momentum, volatility, and sentiment guards align; re-evaluate on the next 4H candle close.",
     "exit": "Exit when price closes below the 20 EMA (586.90) or MACD flips bearish on the 4H chart.",
@@ -41,11 +48,31 @@
       "Sentiment risk: Fear & Greed is in an extreme zone."
     ],
     "checks": [
-      { "label": "Trend confirmation", "status": "Pass", "detail": "BNB is trading above the EMA stack." },
-      { "label": "Momentum quality", "status": "Fail", "detail": "Momentum is stretched or turning against the setup." },
-      { "label": "Volatility control", "status": "Pass", "detail": "ATR is within an acceptable range for simulated stop sizing." },
-      { "label": "Sentiment risk", "status": "Fail", "detail": "Fear & Greed is in an extreme zone." },
-      { "label": "Backtest drawdown", "status": "Pass", "detail": "Recent simulated drawdown stays inside the risk cap." }
+      {
+        "label": "Trend confirmation",
+        "status": "Pass",
+        "detail": "BNB is trading above the EMA stack."
+      },
+      {
+        "label": "Momentum quality",
+        "status": "Fail",
+        "detail": "Momentum is stretched or turning against the setup."
+      },
+      {
+        "label": "Volatility control",
+        "status": "Pass",
+        "detail": "ATR is within an acceptable range for simulated stop sizing."
+      },
+      {
+        "label": "Sentiment risk",
+        "status": "Fail",
+        "detail": "Fear & Greed is in an extreme zone."
+      },
+      {
+        "label": "Backtest drawdown",
+        "status": "Pass",
+        "detail": "Recent simulated drawdown stays inside the risk cap."
+      }
     ],
     "principle": "No trade is also a valid strategy."
   },
@@ -69,6 +96,6 @@
     "marketData": "coinmarketcap_rest",
     "indicators": "live_candles",
     "backtest": "live_candles",
-    "note": "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and the backtest are calculated from live candles (OKX public fallback because CMC OHLCV was unavailable for this key/plan)."
+    "note": "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and the backtest are calculated from live candles. If CMC OHLCV is unavailable, candle-based calculations transparently use the public BNBUSDT fallback."
   }
 }
