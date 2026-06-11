@@ -235,8 +235,57 @@ export function SentinelDashboard() {
           isFixtureScenario={!isLiveScenario}
         />
         <StrategySpecificationPanel specification={strategySpecification} />
+        <Footer />
       </div>
     </main>
+  );
+}
+
+function Footer() {
+  const links = [
+    {
+      label: "GitHub repository",
+      href: "https://github.com/TONiE8668/sentinel-alpha-skill"
+    },
+    {
+      label: "LLM Skill definition",
+      href: "https://github.com/TONiE8668/sentinel-alpha-skill/blob/main/skill/sentinel-alpha/SKILL.md"
+    },
+    {
+      label: "Spec JSON Schema",
+      href: "https://github.com/TONiE8668/sentinel-alpha-skill/blob/main/skill/sentinel-alpha/strategy-spec.schema.json"
+    },
+    {
+      label: "CoinMarketCap AI Agent Hub",
+      href: "https://coinmarketcap.com/api/agent"
+    }
+  ];
+
+  return (
+    <footer className="rounded-lg border border-white/10 bg-panel/60 px-5 py-6 backdrop-blur md:px-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+          {links.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-mist underline-offset-4 transition-colors hover:text-signal hover:underline"
+            >
+              {link.label} ↗
+            </a>
+          ))}
+        </div>
+        <p className="text-xs leading-5 text-mist/80">
+          Open source · Powered by CoinMarketCap data
+        </p>
+      </div>
+      <p className="mt-4 border-t border-white/[0.06] pt-4 text-xs leading-5 text-mist/70">
+        Sentinel Alpha Skill runs in simulation mode only. It does not connect to a wallet,
+        execute trades, or sign transactions, and its output is not financial advice.
+      </p>
+    </footer>
   );
 }
 
@@ -344,10 +393,10 @@ function DemoReadout({
     backtestStatus?.ok === true && backtestStatus.data.source === "local_fixture_candles";
   const items = [
     {
-      label: "Track 2 fit",
-      value: "Backtestable strategy spec",
+      label: "Strategy output",
+      value: "Backtestable spec",
       status: "Ready",
-      detail: "Generates structured BUY / WAIT / EXIT strategy outputs for BNB markets."
+      detail: "Structured BUY / WAIT / EXIT decisions with entry, exit, stop, and sizing rules."
     },
     {
       label: "CMC data",
@@ -387,18 +436,9 @@ function DemoReadout({
 
   return (
     <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
-      <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-white">Hackathon Demo Readout</h2>
-          <p className="mt-2 text-sm leading-6 text-mist">
-            Built for BNB Hack Track 2: Strategy Skills. Sentinel Alpha produces a
-            testable strategy spec and rejects unsafe setups before any simulated entry.
-          </p>
-        </div>
-        <div className="rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
-          No trade is also a valid strategy.
-        </div>
-      </div>
+      <h2 className="mb-5 font-display text-xl font-semibold tracking-tight text-white">
+        Live System Status
+      </h2>
 
       <div className="grid gap-3 md:grid-cols-5">
         {items.map((item) => (
@@ -644,7 +684,7 @@ function MarketRegimePanel({
   }[regime];
 
   return (
-    <Card title="Market Regime Panel">
+    <Card title="Market Regime">
       <div className={`inline-flex rounded-md border px-4 py-2 text-xl font-semibold ${regimeClass}`}>
         {regime}
       </div>
@@ -738,7 +778,7 @@ function RefusalNarrativePanel({
   const reasons = blockedReasons.length > 0 ? blockedReasons.slice(0, 3) : scenario.strategy.reasoning.slice(0, 3);
 
   return (
-    <Card title={title} eyebrow="Judge-facing decision narrative">
+    <Card title={title} eyebrow="Decision narrative">
       <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <div className="rounded-md border border-white/10 bg-ink/70 p-5">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Guard verdict</p>
@@ -958,7 +998,7 @@ function StrategySpecificationPanel({
   }
 
   return (
-    <Card title="Strategy Specification JSON" eyebrow="Track 2 deliverable preview">
+    <Card title="Strategy Specification JSON" eyebrow="Machine-readable strategy artifact">
       <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">

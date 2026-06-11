@@ -77,8 +77,8 @@ https://YOUR_URL/api/backtest?timeframe=4H
 The winning demo path is:
 
 1. Open the dashboard.
-2. Show `Hackathon Demo Readout`.
-3. Click `Scenario B: High Volatility Rejected`.
+2. Show `Live System Status`.
+3. Click `Scenario B: Stress Test - Volatility Rejection (Fixture)`.
 4. Pause on `Why The AI Refused`.
 5. Show `Live Backtest Results`.
 6. Copy or download `Strategy Specification JSON`.

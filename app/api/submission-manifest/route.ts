@@ -55,7 +55,7 @@ export async function GET() {
     ],
     recommendedDemoFlow: [
       "Open the dashboard",
-      "Show Hackathon Demo Readout",
+      "Show the Live System Status tiles",
       "Show Scenario A: Live Market Analysis with live CMC market context",
       "Click Scenario B: Stress Test - Volatility Rejection (Fixture)",
       "Pause on Why The AI Refused",

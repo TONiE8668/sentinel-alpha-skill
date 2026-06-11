@@ -149,7 +149,7 @@ It does not:
 ## Demo Flow
 
 1. Open the dashboard.
-2. Show the Hackathon Demo Readout.
+2. Show the Live System Status tiles.
 3. Show live CMC quote and Fear & Greed.
 4. Show RSI, MACD, EMA, and ATR calculated from live candles.
 5. Click Scenario A: Live Market Analysis.
