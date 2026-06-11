@@ -996,7 +996,13 @@ function MarketSnapshot({
     : scenario.shortName;
 
   return (
-    <Card title="Market Snapshot" eyebrow={eyebrow}>
+    <Card title="Market Snapshot" eyebrow={eyebrow} step="Step 01 · Market evidence">
+      {marketStatus === null && (
+        <div className="mb-4 rounded-md border border-amber/35 bg-amber/10 px-4 py-2.5 text-xs font-semibold leading-5 text-amber">
+          Synthetic stress-test fixture - deliberately extreme values (euphoric pump), not live
+          market data. Switch to Scenario A for the live feed.
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         {metrics.map((metric) => (
           <div key={metric.label} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
@@ -1076,7 +1082,7 @@ function StrategyOutput({
         : "0 0 32px rgba(246,196,83,0.4)";
 
   return (
-    <Card title="AI Strategy Output" eyebrow="Backtestable strategy spec">
+    <Card title="AI Strategy Output" eyebrow="Backtestable strategy spec" step="Step 02 · The decision">
       <div className="grid gap-4 md:grid-cols-[0.75fr_1.25fr]">
         <div className="rounded-md border border-white/10 bg-ink/70 p-5">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Decision</p>
@@ -1139,7 +1145,7 @@ function RefusalNarrativePanel({
   const reasons = blockedReasons.length > 0 ? blockedReasons.slice(0, 3) : scenario.strategy.reasoning.slice(0, 3);
 
   return (
-    <Card title={title} eyebrow="Decision narrative">
+    <Card title={title} eyebrow="Decision narrative" step="Step 03 · The refusal">
       <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <div className="rounded-md border border-white/10 bg-ink/70 p-5">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Guard verdict</p>
@@ -1183,7 +1189,7 @@ function RiskGuardPanel({
   const blocked = status === "BLOCKED";
 
   return (
-    <Card title="Risk Guard">
+    <Card title="Risk Guard" step="Step 04 · Guard detail">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Status</p>
@@ -1216,7 +1222,16 @@ function RiskGuardPanel({
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {checks.map((check) => (
-          <div key={check.label} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+          <div
+            key={check.label}
+            className={`rounded-md border p-4 ${
+              check.status === "Fail"
+                ? "border-danger/45 bg-danger/[0.08]"
+                : check.status === "Warning"
+                  ? "border-amber/35 bg-amber/[0.05]"
+                  : "border-white/10 bg-white/[0.035]"
+            }`}
+          >
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold text-white">{check.label}</p>
               <StatusPill status={check.status} />
@@ -1240,17 +1255,42 @@ function BacktestPanel({
   isLoadingBacktest: boolean;
   isFixtureScenario: boolean;
 }) {
-  const metrics = [
-    { label: "Simulated return", value: formatPercent(backtest.simulatedReturn), tone: backtest.simulatedReturn >= 0 ? "positive" : "negative" },
-    { label: "Max drawdown", value: formatPercent(-Math.abs(backtest.maxDrawdown)), tone: "negative" },
-    { label: "Win rate", value: `${backtest.winRate}%` },
-    { label: "Number of trades", value: backtest.numberOfTrades.toString() },
-    { label: "Buy & Hold comparison", value: formatPercent(backtest.buyHoldReturn), tone: backtest.buyHoldReturn >= 0 ? "positive" : "negative" }
+  const metrics: Array<{
+    label: string;
+    value: number;
+    format: (value: number) => string;
+    tone?: "positive" | "negative";
+  }> = [
+    {
+      label: "Simulated return",
+      value: backtest.simulatedReturn,
+      format: formatPercent,
+      tone: backtest.simulatedReturn >= 0 ? "positive" : "negative"
+    },
+    {
+      label: "Max drawdown",
+      value: -Math.abs(backtest.maxDrawdown),
+      format: formatPercent,
+      tone: "negative"
+    },
+    { label: "Win rate", value: backtest.winRate, format: (value) => `${Math.round(value)}%` },
+    {
+      label: "Number of trades",
+      value: backtest.numberOfTrades,
+      format: (value) => Math.round(value).toString()
+    },
+    {
+      label: "Buy & Hold comparison",
+      value: backtest.buyHoldReturn,
+      format: formatPercent,
+      tone: backtest.buyHoldReturn >= 0 ? "positive" : "negative"
+    }
   ];
   const liveBacktest = backtestStatus?.ok ? backtestStatus.data : null;
 
   return (
     <Card
+      step="Step 05 · Backtest proof"
       title={
         liveBacktest
           ? "Live Backtest Results"
@@ -1274,8 +1314,8 @@ function BacktestPanel({
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-mist">
               {metric.label}
             </p>
-            <p className={`mt-2 text-xl font-semibold ${metric.tone === "negative" ? "text-danger" : metric.tone === "positive" ? "text-signal" : "text-white"}`}>
-              {metric.value}
+            <p className={`mt-2 font-display text-2xl font-bold tracking-tight ${metric.tone === "negative" ? "text-danger" : metric.tone === "positive" ? "text-signal" : "text-white"}`}>
+              <CountUp value={metric.value} format={metric.format} />
             </p>
           </div>
         ))}
@@ -1359,7 +1399,7 @@ function StrategySpecificationPanel({
   }
 
   return (
-    <Card title="Strategy Specification JSON" eyebrow="Machine-readable strategy artifact">
+    <Card title="Strategy Specification JSON" eyebrow="Machine-readable strategy artifact" step="Step 06 · The artifact">
       <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">
@@ -1533,16 +1573,25 @@ function PlaceholderChart({ points }: { points: number[] }) {
 function Card({
   title,
   eyebrow,
+  step,
   children
 }: {
   title: string;
   eyebrow?: string;
+  step?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur transition-colors duration-300 hover:border-white/20 md:p-6">
       <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <h2 className="font-display text-xl font-semibold tracking-tight text-white">{title}</h2>
+        <div>
+          {step && (
+            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.24em] text-signal/80">
+              {step}
+            </p>
+          )}
+          <h2 className="font-display text-xl font-semibold tracking-tight text-white">{title}</h2>
+        </div>
         {eyebrow && <p className="text-sm text-mist">{eyebrow}</p>}
       </div>
       {children}
@@ -1619,6 +1668,30 @@ function RuleBlock({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-sm leading-6 text-slate-200">{value}</p>
     </div>
   );
+}
+
+function CountUp({ value, format }: { value: number; format: (value: number) => string }) {
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    const start = performance.now();
+    const duration = 900;
+    let frame = 0;
+
+    const step = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - (1 - progress) ** 3;
+      setDisplay(value * eased);
+      if (progress < 1) {
+        frame = requestAnimationFrame(step);
+      }
+    };
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  return <>{format(display)}</>;
 }
 
 function InfoLine({ label, value }: { label: string; value: string }) {

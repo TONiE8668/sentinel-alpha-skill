@@ -50,11 +50,11 @@ export const scenarios: Record<Scenario["id"], Scenario> = {
     name: "Scenario B: Stress Test - Volatility Rejection (Fixture)",
     shortName: "Volatility Rejection Stress Test",
     description:
-      "Deterministic fixture that demonstrates how the Risk Guard rejects a fast, overheated market.",
+      "Deterministic fixture of a euphoric, overheated pump - the exact setup naive bots chase and the Risk Guard refuses.",
     market: {
       asset: "BNB/USDT",
       currentPrice: 641.09,
-      change24h: -7.84,
+      change24h: 8.62,
       rsi: 76,
       macdStatus: "Bearish crossover",
       emaTrend: "Mixed EMA stack",
