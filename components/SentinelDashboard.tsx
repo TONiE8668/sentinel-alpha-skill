@@ -36,6 +36,43 @@ type HealthStatusResponse = {
   };
 };
 
+type MarketTickerItem = {
+  symbol: string;
+  price: number | null;
+  change24h: number | null;
+};
+
+type MarketTickerResponse =
+  | {
+      ok: true;
+      data: {
+        source: "coinmarketcap_rest";
+        fetchedAt: string;
+        items: Array<{
+          symbol: string;
+          price: number;
+          change24h: number;
+        }>;
+      };
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+const FALLBACK_TICKER_ITEMS: MarketTickerItem[] = [
+  "BTC",
+  "ETH",
+  "BNB",
+  "SOL",
+  "XRP",
+  "ADA",
+  "DOGE",
+  "TON",
+  "TRX",
+  "AVAX"
+].map((symbol) => ({ symbol, price: null, change24h: null }));
+
 // Staged reveal: 1..5 sweep the guards one by one, then the verdict stamps in.
 const REVEAL_GUARD_COUNT = 5;
 const REVEAL_DECISION = REVEAL_GUARD_COUNT + 1;
@@ -47,6 +84,7 @@ export function SentinelDashboard() {
   const [liveTechnical, setLiveTechnical] = useState<TechnicalIndicatorsResponse | null>(null);
   const [liveBacktest, setLiveBacktest] = useState<BacktestResponse | null>(null);
   const [healthStatus, setHealthStatus] = useState<HealthStatusResponse | null>(null);
+  const [marketTicker, setMarketTicker] = useState<MarketTickerResponse | null>(null);
   const [isLoadingMarket, setIsLoadingMarket] = useState(false);
   const [isLoadingTechnical, setIsLoadingTechnical] = useState(false);
   const [isLoadingBacktest, setIsLoadingBacktest] = useState(false);
@@ -160,10 +198,26 @@ export function SentinelDashboard() {
     }
   }, []);
 
+  const loadMarketTicker = useCallback(async () => {
+    try {
+      const response = await fetch("/api/market-ticker", {
+        cache: "no-store"
+      });
+      const payload = (await response.json()) as MarketTickerResponse;
+      setMarketTicker(payload);
+    } catch {
+      setMarketTicker({
+        ok: false,
+        error: "Unable to reach local market ticker route."
+      });
+    }
+  }, []);
+
   useEffect(() => {
     void loadHealthStatus();
     void loadMarketSnapshot();
-  }, [loadHealthStatus, loadMarketSnapshot]);
+    void loadMarketTicker();
+  }, [loadHealthStatus, loadMarketSnapshot, loadMarketTicker]);
 
   useEffect(() => {
     void loadTechnicalIndicators(scenario.strategy.suggestedTimeframe);
@@ -305,6 +359,7 @@ export function SentinelDashboard() {
           onRunJudgeDemo={() => void runJudgeDemo()}
           demoRunning={demoCaption !== null}
         />
+        <MarketTape tickerStatus={marketTicker} />
         <ScenarioControls
           activeScenarioId={activeScenarioId}
           onSelectScenario={setActiveScenarioId}
@@ -416,7 +471,7 @@ function Footer() {
   ];
 
   return (
-    <footer className="rounded-lg border border-white/10 bg-panel/60 px-5 py-6 backdrop-blur md:px-6">
+    <footer className="terminal-panel px-5 py-6 md:px-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
           {links.map((link) => (
@@ -498,7 +553,7 @@ function CommandCenter({
     : "loading candles";
 
   return (
-    <header className="relative overflow-hidden rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
+    <header className="terminal-panel p-5 md:p-6">
       <div
         aria-hidden
         className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-signal/10 blur-3xl"
@@ -538,7 +593,7 @@ function CommandCenter({
       </div>
 
       <div className="relative grid gap-3 md:grid-cols-3">
-        <div className="rounded-md border border-white/10 bg-ink/70 p-5">
+        <div className="terminal-card terminal-card-strong p-5">
           <div className="flex items-baseline justify-between gap-3">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">
               {market.asset}
@@ -556,11 +611,11 @@ function CommandCenter({
           </p>
         </div>
 
-        <div className="relative rounded-md border border-white/10 bg-ink/70 p-5">
+        <div className="terminal-card terminal-card-strong overflow-visible p-5">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">AI decision</p>
           {decisionRevealed ? (
             <>
-              <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="mt-2 flex items-center justify-between gap-3 overflow-visible">
                 <div className="relative">
                   <p
                     className={`font-display text-4xl font-bold tracking-tight ${decisionTone} animate-fade-up`}
@@ -568,12 +623,14 @@ function CommandCenter({
                     {strategy.decision}
                   </p>
                   {blocked && (
-                    <span className="absolute -right-4 -top-3 animate-stamp-in rounded border-2 border-danger px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.2em] text-danger">
+                    <span className="glow-pill glow-pill-danger absolute -right-4 -top-3 animate-stamp-in rounded border-2 border-danger px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.2em] text-danger">
                       Blocked
                     </span>
                   )}
                 </div>
-                <ConfidenceRing value={strategy.confidenceScore} decision={strategy.decision} />
+                <div className="shrink-0 overflow-visible">
+                  <ConfidenceRing value={strategy.confidenceScore} decision={strategy.decision} />
+                </div>
               </div>
               <div className="mt-4">
                 <div className="flex items-center justify-between text-xs font-medium text-mist">
@@ -611,12 +668,12 @@ function CommandCenter({
           )}
         </div>
 
-        <div className="rounded-md border border-white/10 bg-ink/70 p-5">
+        <div className="terminal-card terminal-card-strong p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Risk guards</p>
             {decisionRevealed ? (
               <span
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] ${blocked ? "border-danger/45 bg-danger/10 text-danger" : "border-signal/45 bg-signal/10 text-signal"} animate-fade-up`}
+                className={`glow-pill rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] ${blocked ? "glow-pill-danger border-danger/45 bg-danger/10 text-danger" : "glow-pill-signal border-signal/45 bg-signal/10 text-signal"} animate-fade-up`}
               >
                 {blocked ? `${failedGuards} blocked` : "All passed"}
               </span>
@@ -669,9 +726,18 @@ function CommandCenter({
           type="button"
           onClick={onRunJudgeDemo}
           disabled={demoRunning}
-          className="rounded-md border border-signal/50 bg-signal/10 px-5 py-2.5 text-sm font-semibold text-signal shadow-glow-teal transition hover:bg-signal/20 disabled:cursor-not-allowed disabled:opacity-60"
+          className="walkthrough-cta rounded-md border px-5 py-2.5 text-sm font-semibold text-signal disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {demoRunning ? "Walkthrough running..." : "▶ Run product walkthrough · 45s"}
+          {demoRunning ? (
+            "Walkthrough running..."
+          ) : (
+            <>
+              <span className="play-icon" aria-hidden>
+                ▶
+              </span>
+              <span>Run product walkthrough · 45s</span>
+            </>
+          )}
         </button>
         <p className="text-xs leading-5 text-mist">
           Auto-plays the full product flow: live analysis → risk-guard stress test → refusal →
@@ -680,6 +746,110 @@ function CommandCenter({
       </div>
     </header>
   );
+}
+
+function MarketTape({ tickerStatus }: { tickerStatus: MarketTickerResponse | null }) {
+  const liveItems: MarketTickerItem[] =
+    tickerStatus?.ok === true
+      ? tickerStatus.data.items.map((item) => ({
+          symbol: item.symbol,
+          price: item.price,
+          change24h: item.change24h
+        }))
+      : FALLBACK_TICKER_ITEMS;
+  const sourceLabel =
+    tickerStatus?.ok === true
+      ? "CMC live market tape"
+      : tickerStatus === null
+        ? "Connecting market tape"
+        : "Fallback market tape";
+  const sourceDetail =
+    tickerStatus?.ok === true
+      ? `updated ${new Date(tickerStatus.data.fetchedAt).toLocaleTimeString()}`
+      : tickerStatus === null
+        ? "loading quotes"
+        : "live quotes unavailable";
+  const visibleItems = [...liveItems, ...liveItems];
+
+  return (
+    <section
+      className="terminal-panel px-0 py-2"
+      aria-label="Top crypto market tape"
+      title={tickerStatus?.ok === false ? tickerStatus.error : undefined}
+    >
+      <div className="flex items-center gap-3">
+        <div className="shrink-0 px-4 text-[10px] font-bold uppercase tracking-[0.18em] text-mist">
+          <span className={tickerStatus?.ok === true ? "text-signal" : "text-amber"}>
+            {sourceLabel}
+          </span>
+          <span className="ml-2 hidden font-semibold normal-case tracking-normal text-mist/80 sm:inline">
+            {sourceDetail}
+          </span>
+        </div>
+        <div className="market-tape min-w-0 flex-1 border-l border-white/10">
+          <p className="sr-only">
+            {sourceLabel}:{" "}
+            {liveItems
+              .map((item) => {
+                const { change24h, price, symbol } = item;
+
+                return price === null || change24h === null
+                  ? `${symbol} unavailable`
+                  : `${symbol} ${formatTickerPrice(price)} ${formatPercent(change24h)}`;
+              })
+              .join(", ")}
+          </p>
+          <div className="market-tape-track gap-7 py-1 pr-7" aria-hidden>
+            {visibleItems.map((item, index) => {
+              const { change24h, price, symbol } = item;
+
+              if (price === null || change24h === null) {
+                return (
+                  <div
+                    key={`${symbol}-${index}`}
+                    className="flex shrink-0 items-baseline gap-2 text-xs"
+                  >
+                    <span className="font-bold text-slate-100">{symbol}</span>
+                    <span className="font-medium text-mist">--</span>
+                    <span className="font-semibold text-mist/70">24h --</span>
+                  </div>
+                );
+              }
+
+              const isUp = change24h >= 0;
+
+              return (
+                <div
+                  key={`${symbol}-${index}`}
+                  className="flex shrink-0 items-baseline gap-2 text-xs"
+                >
+                  <span className="font-bold text-slate-100">{symbol}</span>
+                  <span className="font-medium text-mist">{formatTickerPrice(price)}</span>
+                  <span
+                    className={`font-semibold ${isUp ? "text-signal" : "text-danger"}`}
+                  >
+                    {formatPercent(change24h)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function formatTickerPrice(value: number) {
+  if (value >= 1000) {
+    return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  }
+
+  if (value >= 1) {
+    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
 }
 
 function LiveTicker({ fetchedAt }: { fetchedAt: string }) {
@@ -760,16 +930,13 @@ function WhyThisExists() {
   ];
 
   return (
-    <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
+    <section className="terminal-panel p-5 md:p-6">
       <h2 className="mb-5 font-display text-xl font-semibold tracking-tight text-white">
         Why This Exists
       </h2>
       <div className="grid gap-3 md:grid-cols-3">
         {cards.map((card) => (
-          <div
-            key={card.eyebrow}
-            className={`rounded-md border border-white/10 border-t-2 bg-white/[0.035] p-5 transition-colors duration-300 hover:bg-white/[0.05] ${card.border}`}
-          >
+          <div key={card.eyebrow} className={`terminal-card border-t-2 p-5 ${card.border}`}>
             <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${card.accent}`}>
               {card.eyebrow}
             </p>
@@ -846,9 +1013,9 @@ function CmcDataProof({
     <Card title="CMC Data Proof" eyebrow="Judge-facing source audit" step="Data provenance">
       <div className="grid gap-3 lg:grid-cols-4">
         {proofItems.map((item) => (
-          <div key={item.label} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-mist">
+          <div key={item.label} className="terminal-card p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <p className="min-w-0 text-xs font-medium uppercase tracking-[0.14em] text-mist">
                 {item.label}
               </p>
               <ProofPill value={item.status} />
@@ -878,9 +1045,9 @@ function RiskCaseLibrary() {
     >
       <div className="grid gap-3 lg:grid-cols-3">
         {riskCaseLibrary.map((riskCase) => (
-          <div key={riskCase.id} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
+          <div key={riskCase.id} className="terminal-card p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-signal/80">
                   {riskCase.regime}
                 </p>
@@ -911,13 +1078,13 @@ function RiskCaseLibrary() {
                 </span>
               ))}
             </div>
-            <p className="mt-4 rounded-md border border-white/10 bg-ink/55 p-3 text-xs leading-5 text-slate-300">
+            <p className="terminal-card terminal-card-strong mt-4 p-3 text-xs leading-5 text-slate-300">
               {riskCase.takeaway}
             </p>
           </div>
         ))}
       </div>
-      <div className="mt-4 rounded-md border border-white/10 bg-ink/60 p-4 text-sm leading-6 text-mist">
+      <div className="terminal-card terminal-card-strong mt-4 p-4 text-sm leading-6 text-mist">
         Case library entries are controlled replay cases used to demonstrate the guard logic
         across bullish, sideways, and high-risk regimes. Live CMC market context remains visible
         separately in the CMC Data Proof and Strategy Specification JSON panels.
@@ -928,12 +1095,15 @@ function RiskCaseLibrary() {
 
 function ProofPill({ value }: { value: string }) {
   const isReady = value === "Ready" || value === "Live" || value === "CMC OHLCV";
+  const isLabeledSource = value === "Labeled source";
   return (
     <span
-      className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+      className={`glow-pill shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
         isReady
-          ? "border-signal/40 bg-signal/10 text-signal"
-          : "border-amber/40 bg-amber/10 text-amber"
+          ? "glow-pill-signal border-signal/40 bg-signal/10 text-signal"
+          : isLabeledSource
+            ? "glow-pill-amber border-amber/40 bg-amber/10 text-amber"
+            : "border-amber/40 bg-amber/10 text-amber"
       }`}
     >
       {value}
@@ -951,12 +1121,12 @@ function CaseDecisionBadge({
   const blocked = status === "BLOCKED";
   return (
     <span
-      className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+      className={`glow-pill whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-bold ${
         blocked
-          ? "border-danger/45 bg-danger/10 text-danger"
+          ? "glow-pill-danger border-danger/45 bg-danger/10 text-danger"
           : decision === "BUY"
-            ? "border-signal/40 bg-signal/10 text-signal"
-            : "border-amber/40 bg-amber/10 text-amber"
+            ? "glow-pill-signal border-signal/40 bg-signal/10 text-signal"
+            : "glow-pill-amber border-amber/40 bg-amber/10 text-amber"
       }`}
     >
       {decision} · {status}
@@ -1021,27 +1191,19 @@ function DemoReadout({
   ];
 
   return (
-    <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur md:p-6">
+    <section className="terminal-panel p-5 md:p-6">
       <h2 className="mb-5 font-display text-xl font-semibold tracking-tight text-white">
         Live System Status
       </h2>
 
       <div className="grid gap-3 md:grid-cols-5">
         {items.map((item) => (
-          <div key={item.label} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-mist">
+          <div key={item.label} className="terminal-card p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <p className="min-w-0 text-xs font-medium uppercase tracking-[0.14em] text-mist">
                 {item.label}
               </p>
-              <span
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                  item.status === "Ready"
-                    ? "border-signal/40 bg-signal/10 text-signal"
-                    : "border-amber/40 bg-amber/10 text-amber"
-                }`}
-              >
-                {item.status}
-              </span>
+              <ProofPill value={item.status} />
             </div>
             <p className="mt-3 text-base font-semibold text-white">{item.value}</p>
             <p className="mt-2 text-xs leading-5 text-mist">{item.detail}</p>
@@ -1078,7 +1240,7 @@ function ScenarioControls({
   const isRefreshing = isLoadingMarket || isLoadingTechnical || isLoadingBacktest;
 
   return (
-    <section className="rounded-lg border border-white/10 bg-panel/75 p-3 backdrop-blur">
+    <section className="terminal-panel p-3">
       <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <DataSourceBadge
           marketStatus={marketStatus}
@@ -1093,7 +1255,7 @@ function ScenarioControls({
           type="button"
           onClick={onRefreshData}
           disabled={isRefreshing}
-          className="w-full rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
+          className="w-full rounded-md border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white transition hover:border-signal/35 hover:bg-signal/[0.08] hover:text-signal disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
         >
           {isRefreshing ? "Refreshing data..." : "Refresh Live Data"}
         </button>
@@ -1108,10 +1270,10 @@ function ScenarioControls({
               key={scenario.id}
               type="button"
               onClick={() => onSelectScenario(scenario.id)}
-              className={`rounded-md border px-4 py-4 text-left transition ${
+              className={`scenario-card border px-4 py-4 text-left ${
                 isActive
-                  ? "border-signal/70 bg-signal/12 text-white"
-                  : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/25 hover:bg-white/[0.06]"
+                  ? "active-scenario-card bg-signal/[0.12] text-white"
+                  : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-signal/35 hover:bg-white/[0.06]"
               }`}
             >
               <span className="block text-sm font-semibold">{scenario.name}</span>
@@ -1147,7 +1309,7 @@ function DataSourceBadge({
     (isLoadingBacktest && backtestStatus === null)
   ) {
     return (
-      <div className="rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
+      <div className="glow-pill glow-pill-amber rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
         Loading live data...
       </div>
     );
@@ -1155,7 +1317,7 @@ function DataSourceBadge({
 
   if (isStressScenario) {
     return (
-      <div className="rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
+      <div className="glow-pill glow-pill-amber rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
         {marketStatus?.ok ? "Live CMC + controlled stress inputs" : "Controlled stress fallback"}
       </div>
     );
@@ -1169,7 +1331,7 @@ function DataSourceBadge({
         : "live indicators + live backtest";
 
     return (
-      <div className="rounded-md border border-signal/35 bg-signal/10 px-4 py-2 text-sm font-semibold text-signal">
+      <div className="glow-pill glow-pill-signal rounded-md border border-signal/35 bg-signal/10 px-4 py-2 text-sm font-semibold text-signal">
         Live CMC + {candleSource}
       </div>
     );
@@ -1177,14 +1339,14 @@ function DataSourceBadge({
 
   if (marketStatus?.ok) {
     return (
-      <div className="rounded-md border border-signal/35 bg-signal/10 px-4 py-2 text-sm font-semibold text-signal">
+      <div className="glow-pill glow-pill-signal rounded-md border border-signal/35 bg-signal/10 px-4 py-2 text-sm font-semibold text-signal">
         Live CMC quote + fixture indicators
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
+    <div className="glow-pill glow-pill-amber rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
       Fixture fallback mode
       {marketStatus?.ok === false ? `: ${marketStatus.error}` : ""}
     </div>
@@ -1246,7 +1408,7 @@ function MarketSnapshot({
       )}
       <div className="grid gap-3 sm:grid-cols-2">
         {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+          <div key={metric.label} className="terminal-card p-4">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">
               {metric.label}
             </p>
@@ -1293,7 +1455,7 @@ function MarketRegimePanel({
 
   return (
     <Card title="Market Regime">
-      <div className={`inline-flex rounded-md border px-4 py-2 text-xl font-semibold ${regimeClass}`}>
+      <div className={`glow-pill inline-flex rounded-md border px-4 py-2 text-xl font-semibold ${regimeClass}`}>
         {regime}
       </div>
       <p className="mt-5 text-sm leading-6 text-slate-300">{explanation}</p>
@@ -1324,17 +1486,19 @@ function StrategyOutput({
 
   return (
     <Card title="AI Strategy Output" eyebrow="Backtestable strategy spec" step="Step 02 · The decision">
-      <div className="grid gap-4 md:grid-cols-[0.75fr_1.25fr]">
-        <div className="rounded-md border border-white/10 bg-ink/70 p-5">
+      <div className="grid gap-4 md:grid-cols-[minmax(19rem,0.82fr)_minmax(0,1.18fr)]">
+        <div className="terminal-card terminal-card-strong overflow-visible p-5">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Decision</p>
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="mt-3 flex min-w-0 items-center justify-between gap-5 overflow-visible">
             <p
-              className={`font-display text-5xl font-bold tracking-tight ${decisionTone}`}
+              className={`min-w-0 font-display text-5xl font-bold leading-none tracking-tight ${decisionTone}`}
               style={{ textShadow: decisionGlow }}
             >
               {strategy.decision}
             </p>
-            <ConfidenceRing value={strategy.confidenceScore} decision={strategy.decision} />
+            <div className="shrink-0 overflow-visible">
+              <ConfidenceRing value={strategy.confidenceScore} decision={strategy.decision} />
+            </div>
           </div>
           <div className="mt-5 space-y-3 text-sm">
             <InfoLine label="Timeframe" value={strategy.suggestedTimeframe} />
@@ -1350,7 +1514,7 @@ function StrategyOutput({
         </div>
       </div>
 
-      <div className="mt-5 rounded-md border border-white/10 bg-white/[0.035] p-4">
+      <div className="terminal-card mt-5 p-4">
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Reasoning</p>
         <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300">
           {strategy.reasoning.map((reason) => (
@@ -1388,9 +1552,9 @@ function RefusalNarrativePanel({
   return (
     <Card title={title} eyebrow="Decision narrative" step="Step 03 · The refusal">
       <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
-        <div className="rounded-md border border-white/10 bg-ink/70 p-5">
+        <div className="terminal-card terminal-card-strong p-5">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Guard verdict</p>
-          <div className={`mt-3 inline-flex rounded-md border px-4 py-2 text-xl font-semibold ${decisionClass}`}>
+          <div className={`glow-pill mt-3 inline-flex rounded-md border px-4 py-2 text-xl font-semibold ${blocked ? "glow-pill-danger" : "glow-pill-signal"} ${decisionClass}`}>
             {verdict}
           </div>
           <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
@@ -1400,11 +1564,11 @@ function RefusalNarrativePanel({
           </div>
         </div>
 
-        <div className="rounded-md border border-white/10 bg-white/[0.035] p-5">
+        <div className="terminal-card p-5">
           <p className="text-sm leading-6 text-slate-300">{narrative}</p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {reasons.map((reason, index) => (
-              <div key={`${reason}-${index}`} className="rounded-md border border-white/10 bg-ink/50 p-4">
+              <div key={`${reason}-${index}`} className="terminal-card terminal-card-strong p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-mist">
                   Evidence {index + 1}
                 </p>
@@ -1435,7 +1599,7 @@ function RiskGuardPanel({
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">Status</p>
           <p
-            className={`mt-2 font-display text-4xl font-bold tracking-tight ${blocked ? "text-danger" : "text-signal"}`}
+            className={`mt-2 font-display text-4xl font-bold tracking-tight ${blocked ? "glow-pill-danger text-danger" : "glow-pill-signal text-signal"}`}
             style={{
               textShadow: blocked
                 ? "0 0 30px rgba(255,107,107,0.45)"
@@ -1465,7 +1629,7 @@ function RiskGuardPanel({
         {checks.map((check) => (
           <div
             key={check.label}
-            className={`rounded-md border p-4 ${
+            className={`terminal-card p-4 ${
               check.status === "Fail"
                 ? "border-danger/45 bg-danger/[0.08]"
                 : check.status === "Warning"
@@ -1551,7 +1715,7 @@ function BacktestPanel({
     >
       <div className="grid gap-3 md:grid-cols-5">
         {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+          <div key={metric.label} className="terminal-card p-4">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-mist">
               {metric.label}
             </p>
@@ -1564,7 +1728,7 @@ function BacktestPanel({
       <PlaceholderChart points={backtest.chartPoints} />
       {liveBacktest && (
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+          <div className="terminal-card p-4">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-mist">
               Candle source
             </p>
@@ -1572,7 +1736,7 @@ function BacktestPanel({
               {describeCandleSource(liveBacktest.source)}
             </p>
           </div>
-          <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+          <div className="terminal-card p-4">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-mist">
               Exposure time
             </p>
@@ -1580,7 +1744,7 @@ function BacktestPanel({
               {liveBacktest.exposureTime}%
             </p>
           </div>
-          <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+          <div className="terminal-card p-4">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-mist">
               Cost assumption
             </p>
@@ -1642,7 +1806,7 @@ function StrategySpecificationPanel({
   return (
     <Card title="Strategy Specification JSON" eyebrow="Machine-readable strategy artifact" step="Step 06 · The artifact">
       <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+        <div className="terminal-card p-4">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">
             Spec summary
           </p>
@@ -1695,7 +1859,7 @@ function StrategySpecificationPanel({
           </div>
         </div>
 
-        <pre className="max-h-[28rem] overflow-auto rounded-md border border-white/10 bg-ink/80 p-4 text-xs leading-5 text-slate-300">
+        <pre className="terminal-card terminal-card-strong max-h-[28rem] overflow-auto p-4 text-xs leading-5 text-slate-300">
           <code>{specJson}</code>
         </pre>
       </div>
@@ -1745,7 +1909,7 @@ function PlaceholderChart({ points }: { points: number[] }) {
   const gradientId = up ? "equityFillUp" : "equityFillDown";
 
   return (
-    <div className="relative mt-5 overflow-hidden rounded-md border border-white/10 bg-ink/70 p-3">
+    <div className="terminal-card terminal-card-strong relative mt-5 p-3">
       <div className="absolute left-4 top-3 z-10 text-[11px] font-semibold uppercase tracking-[0.16em] text-mist">
         Equity curve · 100 = starting capital
       </div>
@@ -1830,9 +1994,9 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-white/10 bg-panel/80 p-5 shadow-premium backdrop-blur transition-colors duration-300 hover:border-white/20 md:p-6">
-      <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+    <section className="terminal-panel p-5 md:p-6">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           {step && (
             <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.24em] text-signal/80">
               {step}
@@ -1840,7 +2004,7 @@ function Card({
           )}
           <h2 className="font-display text-xl font-semibold tracking-tight text-white">{title}</h2>
         </div>
-        {eyebrow && <p className="text-sm text-mist">{eyebrow}</p>}
+        {eyebrow && <p className="max-w-xl text-sm leading-5 text-mist sm:text-right">{eyebrow}</p>}
       </div>
       {children}
     </section>
@@ -1885,8 +2049,8 @@ function ConfidenceRing({
     decision === "BUY" ? "#4fd1c5" : decision === "EXIT" ? "#ff6b6b" : "#f6c453";
 
   return (
-    <div className="relative h-[76px] w-[76px] shrink-0" aria-label={`Confidence ${value} of 100`}>
-      <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
+    <div className="relative h-20 w-20 shrink-0 overflow-visible" aria-label={`Confidence ${value} of 100`}>
+      <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90 overflow-visible">
         <circle cx="38" cy="38" r={radius} fill="none" stroke="rgba(148,163,184,0.16)" strokeWidth="6" />
         <circle
           cx="38"
@@ -1911,7 +2075,7 @@ function ConfidenceRing({
 
 function RuleBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+    <div className="terminal-card p-4">
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-mist">{label}</p>
       <p className="mt-2 text-sm leading-6 text-slate-200">{value}</p>
     </div>
@@ -1953,15 +2117,15 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 
 function StatusPill({ status }: { status: GuardCheckStatus }) {
   const className = {
-    Pass: "border-signal/40 bg-signal/10 text-signal",
-    Warning: "border-amber/40 bg-amber/10 text-amber",
-    Fail: "border-danger/40 bg-danger/10 text-danger"
+    Pass: "glow-pill-signal border-signal/40 bg-signal/10 text-signal",
+    Warning: "glow-pill-amber border-amber/40 bg-amber/10 text-amber",
+    Fail: "glow-pill-danger border-danger/40 bg-danger/10 text-danger"
   }[status];
   const icon = { Pass: "✓", Warning: "!", Fail: "✕" }[status];
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${className}`}
+      className={`glow-pill inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold ${className}`}
     >
       <span aria-hidden>{icon}</span>
       {status}

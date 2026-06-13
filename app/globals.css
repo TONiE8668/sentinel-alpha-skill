@@ -44,6 +44,34 @@ body::before {
   mask-image: radial-gradient(ellipse 90rem 44rem at 50% 0%, black 28%, transparent 78%);
 }
 
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(79, 209, 197, 0.055) 47%,
+      rgba(79, 209, 197, 0.012) 52%,
+      transparent 100%
+    ) 0 -60vh / 100% 70vh no-repeat,
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.026) 0,
+      rgba(255, 255, 255, 0.026) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+  opacity: 0.18;
+  mix-blend-mode: screen;
+  animation: terminal-scan 28s linear infinite;
+  -webkit-mask-image: radial-gradient(ellipse 92rem 58rem at 50% 12%, black 16%, transparent 84%);
+  mask-image: radial-gradient(ellipse 92rem 58rem at 50% 12%, black 16%, transparent 84%);
+}
+
 main {
   position: relative;
   z-index: 1;
@@ -78,4 +106,256 @@ pre::-webkit-scrollbar-thumb {
 
 pre::-webkit-scrollbar-track {
   background: transparent;
+}
+
+@keyframes terminal-scan {
+  0% {
+    background-position:
+      0 -65vh,
+      0 0;
+  }
+  100% {
+    background-position:
+      0 120vh,
+      0 16px;
+  }
+}
+
+@keyframes active-scenario-sweep {
+  0% {
+    transform: translateX(-35%);
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateX(135%);
+    opacity: 0.22;
+  }
+}
+
+@keyframes play-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes ticker-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@layer components {
+  .terminal-panel {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    background:
+      linear-gradient(135deg, rgba(16, 21, 28, 0.88), rgba(8, 12, 18, 0.82) 56%, rgba(17, 27, 34, 0.86)),
+      rgba(16, 21, 28, 0.78);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(16px);
+  }
+
+  .terminal-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(120deg, transparent 12%, rgba(79, 209, 197, 0.095), transparent 42%),
+      radial-gradient(circle at 86% 12%, rgba(79, 209, 197, 0.11), transparent 30%);
+    opacity: 0.42;
+  }
+
+  .terminal-panel > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .terminal-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.044), rgba(79, 209, 197, 0.018)),
+      rgba(255, 255, 255, 0.032);
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .terminal-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(79, 209, 197, 0.24);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18), 0 0 14px rgba(79, 209, 197, 0.055);
+  }
+
+  .terminal-card-strong {
+    background:
+      linear-gradient(145deg, rgba(7, 9, 13, 0.88), rgba(10, 17, 24, 0.78)),
+      rgba(7, 9, 13, 0.72);
+  }
+
+  .glow-pill {
+    position: relative;
+    box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.035);
+  }
+
+  .glow-pill-signal {
+    box-shadow: inset 0 0 16px rgba(79, 209, 197, 0.035), 0 0 12px rgba(79, 209, 197, 0.12);
+    text-shadow: 0 0 12px rgba(79, 209, 197, 0.35);
+  }
+
+  .glow-pill-danger {
+    box-shadow: inset 0 0 16px rgba(255, 107, 107, 0.035), 0 0 12px rgba(255, 107, 107, 0.14);
+    text-shadow: 0 0 12px rgba(255, 107, 107, 0.35);
+  }
+
+  .glow-pill-amber {
+    box-shadow: inset 0 0 16px rgba(246, 196, 83, 0.03), 0 0 10px rgba(246, 196, 83, 0.1);
+    text-shadow: 0 0 12px rgba(246, 196, 83, 0.28);
+  }
+
+  .scenario-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    transition:
+      transform 240ms ease,
+      border-color 240ms ease,
+      background 240ms ease,
+      box-shadow 240ms ease;
+  }
+
+  .scenario-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18), 0 0 14px rgba(79, 209, 197, 0.07);
+  }
+
+  .active-scenario-card {
+    border-color: rgba(79, 209, 197, 0.72);
+    box-shadow:
+      inset 0 0 0 1px rgba(79, 209, 197, 0.12),
+      0 0 18px rgba(79, 209, 197, 0.1);
+  }
+
+  .active-scenario-card::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(79, 209, 197, 0.95), transparent);
+    animation: active-scenario-sweep 7s ease-in-out infinite;
+  }
+
+  .walkthrough-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    border-color: rgba(79, 209, 197, 0.58);
+    background:
+      linear-gradient(135deg, rgba(79, 209, 197, 0.18), rgba(79, 209, 197, 0.065)),
+      rgba(79, 209, 197, 0.1);
+    box-shadow:
+      inset 0 0 22px rgba(79, 209, 197, 0.06),
+      0 0 18px rgba(79, 209, 197, 0.12);
+    transition:
+      transform 220ms ease,
+      border-color 220ms ease,
+      background 220ms ease,
+      box-shadow 220ms ease;
+  }
+
+  .walkthrough-cta:hover {
+    transform: translateY(-1px);
+    border-color: rgba(79, 209, 197, 0.86);
+    background:
+      linear-gradient(135deg, rgba(79, 209, 197, 0.25), rgba(79, 209, 197, 0.09)),
+      rgba(79, 209, 197, 0.13);
+    box-shadow:
+      inset 0 0 26px rgba(79, 209, 197, 0.08),
+      0 0 24px rgba(79, 209, 197, 0.18);
+  }
+
+  .walkthrough-cta .play-icon {
+    display: inline-grid;
+    place-items: center;
+    height: 1.25rem;
+    width: 1.25rem;
+    border-radius: 999px;
+    background: rgba(79, 209, 197, 0.18);
+    animation: play-nudge 3.8s ease-in-out infinite;
+  }
+
+  .market-tape {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .market-tape::before,
+  .market-tape::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    width: 2.5rem;
+    pointer-events: none;
+  }
+
+  .market-tape::before {
+    left: 0;
+    background: linear-gradient(90deg, rgba(7, 9, 13, 0.96), transparent);
+  }
+
+  .market-tape::after {
+    right: 0;
+    background: linear-gradient(270deg, rgba(7, 9, 13, 0.96), transparent);
+  }
+
+  .market-tape-track {
+    display: flex;
+    width: max-content;
+    min-width: 200%;
+    animation: ticker-marquee 52s linear infinite;
+  }
+
+  .market-tape:hover .market-tape-track {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  body::after {
+    opacity: 0.16;
+  }
+
+  .market-tape-track {
+    transform: none !important;
+  }
 }
