@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { scenarios } from "@/lib/fixtures";
+import { riskCaseLibrary } from "@/lib/riskCases";
 import {
   applyRiskGuardDecision,
   buildRiskGuard,
@@ -27,6 +28,14 @@ import type {
 
 const scenarioOrder: ScenarioId[] = ["conservative", "rejected"];
 
+type HealthStatusResponse = {
+  ok: boolean;
+  checkedAt: string;
+  environment: {
+    cmcApiKeyConfigured: boolean;
+  };
+};
+
 // Staged reveal: 1..5 sweep the guards one by one, then the verdict stamps in.
 const REVEAL_GUARD_COUNT = 5;
 const REVEAL_DECISION = REVEAL_GUARD_COUNT + 1;
@@ -37,15 +46,17 @@ export function SentinelDashboard() {
   const [liveMarket, setLiveMarket] = useState<MarketSnapshotResponse | null>(null);
   const [liveTechnical, setLiveTechnical] = useState<TechnicalIndicatorsResponse | null>(null);
   const [liveBacktest, setLiveBacktest] = useState<BacktestResponse | null>(null);
+  const [healthStatus, setHealthStatus] = useState<HealthStatusResponse | null>(null);
   const [isLoadingMarket, setIsLoadingMarket] = useState(false);
   const [isLoadingTechnical, setIsLoadingTechnical] = useState(false);
   const [isLoadingBacktest, setIsLoadingBacktest] = useState(false);
   const scenario = scenarios[activeScenarioId];
   const isLiveScenario = activeScenarioId === "conservative";
+  const isStressScenario = activeScenarioId === "rejected";
   const displayScenario = useMemo<Scenario>(() => {
     const market = {
       ...scenario.market,
-      ...(isLiveScenario && liveMarket?.ok
+      ...(liveMarket?.ok
         ? {
             currentPrice: liveMarket.data.currentPrice,
             change24h: liveMarket.data.change24h,
@@ -137,9 +148,22 @@ export function SentinelDashboard() {
     }
   }, []);
 
+  const loadHealthStatus = useCallback(async () => {
+    try {
+      const response = await fetch("/api/health", {
+        cache: "no-store"
+      });
+      const payload = (await response.json()) as HealthStatusResponse;
+      setHealthStatus(payload);
+    } catch {
+      setHealthStatus(null);
+    }
+  }, []);
+
   useEffect(() => {
+    void loadHealthStatus();
     void loadMarketSnapshot();
-  }, [loadMarketSnapshot]);
+  }, [loadHealthStatus, loadMarketSnapshot]);
 
   useEffect(() => {
     void loadTechnicalIndicators(scenario.strategy.suggestedTimeframe);
@@ -227,6 +251,14 @@ export function SentinelDashboard() {
     () => applyRiskGuardDecision(displayScenario, riskGuard),
     [displayScenario, riskGuard]
   );
+  const specGeneratedAt =
+    isLiveScenario && liveBacktest?.ok === true
+      ? liveBacktest.data.fetchedAt
+      : isLiveScenario && liveTechnical?.ok === true
+        ? liveTechnical.data.fetchedAt
+        : liveMarket?.ok === true
+          ? liveMarket.data.fetchedAt
+          : undefined;
   const strategySpecification = useMemo(
     () =>
       buildStrategySpecification({
@@ -234,7 +266,7 @@ export function SentinelDashboard() {
         regime,
         riskGuard,
         technical: isLiveScenario && liveTechnical?.ok ? liveTechnical.data : null,
-        usesLiveMarketData: isLiveScenario && liveMarket?.ok === true,
+        usesLiveMarketData: liveMarket?.ok === true,
         usesLiveTechnicalData:
           isLiveScenario &&
           liveTechnical?.ok === true &&
@@ -243,16 +275,18 @@ export function SentinelDashboard() {
           isLiveScenario &&
           liveBacktest?.ok === true &&
           liveBacktest.data.source !== "local_fixture_candles",
-        generatedAt:
-          liveBacktest?.ok === true
-            ? liveBacktest.data.fetchedAt
-            : liveTechnical?.ok === true
-              ? liveTechnical.data.fetchedAt
-              : liveMarket?.ok === true
-                ? liveMarket.data.fetchedAt
-                : undefined
+        generatedAt: specGeneratedAt
       }),
-    [finalScenario, isLiveScenario, regime, riskGuard, liveBacktest, liveMarket, liveTechnical]
+    [
+      finalScenario,
+      isLiveScenario,
+      liveBacktest,
+      liveMarket,
+      liveTechnical,
+      regime,
+      riskGuard,
+      specGeneratedAt
+    ]
   );
 
   return (
@@ -266,6 +300,7 @@ export function SentinelDashboard() {
           marketStatus={liveMarket}
           technicalStatus={liveTechnical}
           isLiveScenario={isLiveScenario}
+          isStressScenario={isStressScenario}
           revealStage={revealStage}
           onRunJudgeDemo={() => void runJudgeDemo()}
           demoRunning={demoCaption !== null}
@@ -279,11 +314,18 @@ export function SentinelDashboard() {
           isLoadingMarket={isLoadingMarket}
           isLoadingTechnical={isLoadingTechnical}
           isLoadingBacktest={isLoadingBacktest}
+          isStressScenario={isStressScenario}
           onRefreshData={() => {
             void loadMarketSnapshot();
             void loadTechnicalIndicators(scenario.strategy.suggestedTimeframe);
             void loadBacktest(scenario.strategy.suggestedTimeframe);
           }}
+        />
+        <CmcDataProof
+          healthStatus={healthStatus}
+          marketStatus={liveMarket}
+          technicalStatus={liveTechnical}
+          backtestStatus={liveBacktest}
         />
 
         <section
@@ -292,8 +334,9 @@ export function SentinelDashboard() {
         >
           <MarketSnapshot
             scenario={displayScenario}
-            marketStatus={isLiveScenario ? liveMarket : null}
+            marketStatus={liveMarket}
             technicalStatus={isLiveScenario ? liveTechnical : null}
+            isStressScenario={isStressScenario}
           />
           <StrategyOutput scenario={finalScenario} riskBlocked={riskGuard.status === "BLOCKED"} />
         </section>
@@ -330,6 +373,7 @@ export function SentinelDashboard() {
           technicalStatus={liveTechnical}
           backtestStatus={liveBacktest}
         />
+        <RiskCaseLibrary />
         <WhyThisExists />
         <Footer />
       </div>
@@ -407,6 +451,7 @@ function CommandCenter({
   marketStatus,
   technicalStatus,
   isLiveScenario,
+  isStressScenario,
   revealStage,
   onRunJudgeDemo,
   demoRunning
@@ -418,6 +463,7 @@ function CommandCenter({
   marketStatus: MarketSnapshotResponse | null;
   technicalStatus: TechnicalIndicatorsResponse | null;
   isLiveScenario: boolean;
+  isStressScenario: boolean;
   revealStage: number;
   onRunJudgeDemo: () => void;
   demoRunning: boolean;
@@ -439,7 +485,9 @@ function CommandCenter({
     `DD ${Math.abs(backtest.maxDrawdown).toFixed(1)}%`
   ];
   const failedGuards = riskGuard.checks.filter((check) => check.status === "Fail").length;
-  const candleSourceShort = technicalStatus?.ok
+  const candleSourceShort = isStressScenario
+    ? "controlled stress inputs"
+    : technicalStatus?.ok
     ? {
         cmc_ohlcv_historical: "CMC candles",
         binance_public_klines: "Binance candles",
@@ -504,7 +552,7 @@ function CommandCenter({
           </p>
           <PriceSparkline points={backtest.chartPoints} />
           <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-mist/80">
-            Backtest equity · {isLiveScenario ? "live candles" : "fixture stress test"}
+            Backtest equity · {isLiveScenario ? "live candles" : "controlled stress test"}
           </p>
         </div>
 
@@ -623,10 +671,10 @@ function CommandCenter({
           disabled={demoRunning}
           className="rounded-md border border-signal/50 bg-signal/10 px-5 py-2.5 text-sm font-semibold text-signal shadow-glow-teal transition hover:bg-signal/20 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {demoRunning ? "Demo running..." : "▶ Run judge demo · 45s"}
+          {demoRunning ? "Walkthrough running..." : "▶ Run product walkthrough · 45s"}
         </button>
         <p className="text-xs leading-5 text-mist">
-          Auto-plays the full story: live analysis → risk-guard stress test → the refusal →
+          Auto-plays the full product flow: live analysis → risk-guard stress test → refusal →
           the exportable strategy spec. No wallet, no execution - the risk manager for AI trading.
         </p>
       </div>
@@ -731,11 +779,188 @@ function WhyThisExists() {
         ))}
       </div>
       <p className="mt-4 rounded-md border border-amber/30 bg-amber/[0.06] px-4 py-3 text-sm leading-6 text-slate-300">
-        <span className="font-semibold text-amber">Try it live below:</span> when momentum looks
-        tempting but Fear &amp; Greed sits in an extreme zone, a naive bot buys the dip - Sentinel
-        Alpha refuses, shows its evidence, and records the refusal in the strategy spec.
+        <span className="font-semibold text-amber">Try it live below:</span> when a setup looks
+        tempting but one or more risk guards fail, a naive bot may still chase - Sentinel Alpha
+        refuses, shows its evidence, and records the refusal in the strategy spec.
       </p>
     </section>
+  );
+}
+
+function CmcDataProof({
+  healthStatus,
+  marketStatus,
+  technicalStatus,
+  backtestStatus
+}: {
+  healthStatus: HealthStatusResponse | null;
+  marketStatus: MarketSnapshotResponse | null;
+  technicalStatus: TechnicalIndicatorsResponse | null;
+  backtestStatus: BacktestResponse | null;
+}) {
+  const technicalSource = technicalStatus?.ok ? technicalStatus.data.source : null;
+  const backtestSource = backtestStatus?.ok ? backtestStatus.data.source : null;
+  const cmcOhlcvActive =
+    technicalSource === "cmc_ohlcv_historical" && backtestSource === "cmc_ohlcv_historical";
+  const proofItems = [
+    {
+      label: "CMC API key",
+      value: healthStatus?.environment.cmcApiKeyConfigured ? "Configured" : "Not detected",
+      status: healthStatus?.environment.cmcApiKeyConfigured ? "Ready" : "Needs key",
+      detail:
+        "Checked server-side only; the API key is never exposed to the browser."
+    },
+    {
+      label: "Quote + sentiment",
+      value: marketStatus?.ok ? "CoinMarketCap REST" : "Unavailable",
+      status: marketStatus?.ok ? "Live" : "Fallback",
+      detail: marketStatus?.ok
+        ? `BNB quote and Fear & Greed fetched ${new Date(marketStatus.data.fetchedAt).toLocaleTimeString()}.`
+        : marketStatus?.ok === false
+          ? marketStatus.error
+          : "Waiting for CMC market snapshot."
+    },
+    {
+      label: "Indicator candles",
+      value: technicalStatus?.ok ? describeCandleSource(technicalStatus.data.source) : "Unavailable",
+      status: cmcOhlcvActive ? "CMC OHLCV" : technicalStatus?.ok ? "Labeled source" : "Fallback",
+      detail: technicalStatus?.ok
+        ? `${technicalStatus.data.candleCount} ${technicalStatus.data.timeframe} candles. ${technicalStatus.data.note}`
+        : technicalStatus?.ok === false
+          ? technicalStatus.error
+          : "Waiting for candle source."
+    },
+    {
+      label: "Backtest source",
+      value: backtestStatus?.ok ? describeCandleSource(backtestStatus.data.source) : "Unavailable",
+      status: cmcOhlcvActive ? "CMC OHLCV" : backtestStatus?.ok ? "Labeled source" : "Fallback",
+      detail: backtestStatus?.ok
+        ? `${backtestStatus.data.candleCount} candles, ${backtestStatus.data.transactionCostPercent.toFixed(1)}% cost per side.`
+        : backtestStatus?.ok === false
+          ? backtestStatus.error
+          : "Waiting for backtest."
+    }
+  ];
+
+  return (
+    <Card title="CMC Data Proof" eyebrow="Judge-facing source audit" step="Data provenance">
+      <div className="grid gap-3 lg:grid-cols-4">
+        {proofItems.map((item) => (
+          <div key={item.label} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-mist">
+                {item.label}
+              </p>
+              <ProofPill value={item.status} />
+            </div>
+            <p className="mt-3 text-sm font-semibold text-white">{item.value}</p>
+            <p className="mt-2 text-xs leading-5 text-mist">{item.detail}</p>
+          </div>
+        ))}
+      </div>
+      {!cmcOhlcvActive && (
+        <div className="mt-4 rounded-md border border-amber/35 bg-amber/10 p-4 text-sm leading-6 text-amber">
+          CMC quote and Fear &amp; Greed are live. CMC OHLCV becomes the primary candle
+          source automatically when the API plan allows historical candles; until then,
+          candle sources are labeled and carried into the exported strategy spec.
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function RiskCaseLibrary() {
+  return (
+    <Card
+      title="Risk Guard Case Library"
+      eyebrow="Replay evidence for judge review"
+      step="Strategy evidence"
+    >
+      <div className="grid gap-3 lg:grid-cols-3">
+        {riskCaseLibrary.map((riskCase) => (
+          <div key={riskCase.id} className="rounded-md border border-white/10 bg-white/[0.035] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-signal/80">
+                  {riskCase.regime}
+                </p>
+                <h3 className="mt-1 text-base font-semibold text-white">{riskCase.title}</h3>
+              </div>
+              <CaseDecisionBadge decision={riskCase.decision} status={riskCase.guardStatus} />
+            </div>
+            <p className="mt-3 text-sm leading-6 text-mist">{riskCase.marketCondition}</p>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <InfoLine label="Strategy" value={formatPercent(riskCase.simulatedReturn)} />
+              <InfoLine label="Buy & Hold" value={formatPercent(riskCase.buyHoldReturn)} />
+              <InfoLine label="Max DD" value={formatPercent(-Math.abs(riskCase.maxDrawdown))} />
+              <InfoLine label="DD saved" value={formatPercent(riskCase.drawdownSaved)} />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {riskCase.checks.map((check) => (
+                <span
+                  key={`${riskCase.id}-${check.label}`}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                    check.status === "Fail"
+                      ? "border-danger/40 bg-danger/10 text-danger"
+                      : check.status === "Warning"
+                        ? "border-amber/40 bg-amber/10 text-amber"
+                        : "border-signal/35 bg-signal/10 text-signal"
+                  }`}
+                >
+                  {check.label}: {check.status}
+                </span>
+              ))}
+            </div>
+            <p className="mt-4 rounded-md border border-white/10 bg-ink/55 p-3 text-xs leading-5 text-slate-300">
+              {riskCase.takeaway}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 rounded-md border border-white/10 bg-ink/60 p-4 text-sm leading-6 text-mist">
+        Case library entries are controlled replay cases used to demonstrate the guard logic
+        across bullish, sideways, and high-risk regimes. Live CMC market context remains visible
+        separately in the CMC Data Proof and Strategy Specification JSON panels.
+      </div>
+    </Card>
+  );
+}
+
+function ProofPill({ value }: { value: string }) {
+  const isReady = value === "Ready" || value === "Live" || value === "CMC OHLCV";
+  return (
+    <span
+      className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+        isReady
+          ? "border-signal/40 bg-signal/10 text-signal"
+          : "border-amber/40 bg-amber/10 text-amber"
+      }`}
+    >
+      {value}
+    </span>
+  );
+}
+
+function CaseDecisionBadge({
+  decision,
+  status
+}: {
+  decision: "BUY" | "WAIT" | "EXIT";
+  status: "PASSED" | "BLOCKED";
+}) {
+  const blocked = status === "BLOCKED";
+  return (
+    <span
+      className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+        blocked
+          ? "border-danger/45 bg-danger/10 text-danger"
+          : decision === "BUY"
+            ? "border-signal/40 bg-signal/10 text-signal"
+            : "border-amber/40 bg-amber/10 text-amber"
+      }`}
+    >
+      {decision} · {status}
+    </span>
   );
 }
 
@@ -836,6 +1061,7 @@ function ScenarioControls({
   isLoadingMarket,
   isLoadingTechnical,
   isLoadingBacktest,
+  isStressScenario,
   onRefreshData
 }: {
   activeScenarioId: ScenarioId;
@@ -846,6 +1072,7 @@ function ScenarioControls({
   isLoadingMarket: boolean;
   isLoadingTechnical: boolean;
   isLoadingBacktest: boolean;
+  isStressScenario: boolean;
   onRefreshData: () => void;
 }) {
   const isRefreshing = isLoadingMarket || isLoadingTechnical || isLoadingBacktest;
@@ -860,6 +1087,7 @@ function ScenarioControls({
           isLoadingMarket={isLoadingMarket}
           isLoadingTechnical={isLoadingTechnical}
           isLoadingBacktest={isLoadingBacktest}
+          isStressScenario={isStressScenario}
         />
         <button
           type="button"
@@ -902,7 +1130,8 @@ function DataSourceBadge({
   backtestStatus,
   isLoadingMarket,
   isLoadingTechnical,
-  isLoadingBacktest
+  isLoadingBacktest,
+  isStressScenario
 }: {
   marketStatus: MarketSnapshotResponse | null;
   technicalStatus: TechnicalIndicatorsResponse | null;
@@ -910,6 +1139,7 @@ function DataSourceBadge({
   isLoadingMarket: boolean;
   isLoadingTechnical: boolean;
   isLoadingBacktest: boolean;
+  isStressScenario: boolean;
 }) {
   if (
     (isLoadingMarket && marketStatus === null) ||
@@ -919,6 +1149,14 @@ function DataSourceBadge({
     return (
       <div className="rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
         Loading live data...
+      </div>
+    );
+  }
+
+  if (isStressScenario) {
+    return (
+      <div className="rounded-md border border-amber/35 bg-amber/10 px-4 py-2 text-sm font-semibold text-amber">
+        {marketStatus?.ok ? "Live CMC + controlled stress inputs" : "Controlled stress fallback"}
       </div>
     );
   }
@@ -956,11 +1194,13 @@ function DataSourceBadge({
 function MarketSnapshot({
   scenario,
   marketStatus,
-  technicalStatus
+  technicalStatus,
+  isStressScenario
 }: {
   scenario: Scenario;
   marketStatus: MarketSnapshotResponse | null;
   technicalStatus: TechnicalIndicatorsResponse | null;
+  isStressScenario: boolean;
 }) {
   const { market } = scenario;
   const metrics: Array<{
@@ -977,13 +1217,13 @@ function MarketSnapshot({
       tone: market.change24h >= 0 ? "positive" : "negative"
     },
     {
-      label: "RSI",
+      label: isStressScenario ? "RSI stress input" : "RSI",
       value: market.rsi.toString(),
       meter: { percent: market.rsi, kind: "rsi" }
     },
-    { label: "MACD status", value: market.macdStatus },
-    { label: "EMA trend", value: market.emaTrend },
-    { label: "ATR volatility", value: market.atrVolatility },
+    { label: isStressScenario ? "MACD stress input" : "MACD status", value: market.macdStatus },
+    { label: isStressScenario ? "EMA stress input" : "EMA trend", value: market.emaTrend },
+    { label: isStressScenario ? "ATR stress input" : "ATR volatility", value: market.atrVolatility },
     {
       label: "Fear & Greed",
       value: `${market.fearGreedScore} - ${market.fearGreedLabel}`,
@@ -997,10 +1237,11 @@ function MarketSnapshot({
 
   return (
     <Card title="Market Snapshot" eyebrow={eyebrow} step="Step 01 · Market evidence">
-      {marketStatus === null && (
+      {isStressScenario && (
         <div className="mb-4 rounded-md border border-amber/35 bg-amber/10 px-4 py-2.5 text-xs font-semibold leading-5 text-amber">
-          Synthetic stress-test fixture - deliberately extreme values (euphoric pump), not live
-          market data. Switch to Scenario A for the live feed.
+          Stress test mode: price, 24h change, and Fear &amp; Greed use live CMC data
+          when available. RSI, MACD, EMA trend, ATR, and backtest are controlled stress
+          inputs designed to prove the risk guard can refuse unsafe setups.
         </div>
       )}
       <div className="grid gap-3 sm:grid-cols-2">
@@ -1295,14 +1536,14 @@ function BacktestPanel({
         liveBacktest
           ? "Live Backtest Results"
           : isFixtureScenario
-            ? "Backtest Results (Fixture Stress Test)"
+            ? "Backtest Results (Controlled Stress Test)"
             : "Backtest Results"
       }
       eyebrow={
         liveBacktest
           ? `${liveBacktest.timeframe} candles, ${liveBacktest.candleCount} samples`
           : isFixtureScenario
-            ? "Deterministic fixture scenario for the rejection demo"
+            ? "Controlled stress inputs for risk-guard rejection"
             : isLoadingBacktest
               ? "Loading live backtest..."
               : "Fixture fallback simulation"
@@ -1420,7 +1661,14 @@ function StrategySpecificationPanel({
                     "coinmarketcap_rest_plus_live_indicators_and_backtest"
                   ? "CMC + live backtest"
                   : specification.dataSource.type === "coinmarketcap_rest_plus_fixture_indicators"
-                  ? "CMC + fixtures"
+                  ? specification.scenario.includes("Risk Guard Stress Test")
+                    ? "CMC + stress inputs"
+                    : "CMC + fixtures"
+                  : specification.dataSource.type ===
+                      "fixture_market_plus_live_indicators_and_backtest"
+                    ? "Fixture market + live backtest"
+                    : specification.dataSource.type === "fixture_market_plus_live_indicators"
+                      ? "Fixture market + live indicators"
                   : "Mock fixture"
               }
             />

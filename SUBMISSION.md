@@ -38,6 +38,18 @@ The deployed app also exposes two judge-friendly inspection endpoints:
 
 - `/api/health`
 - `/api/submission-manifest`
+- `/api/judge-report`
+- `/api/strategy-spec?mode=live&timeframe=4H`
+- `/api/strategy-spec?mode=stress&timeframe=1H`
+
+The `/api/strategy-spec` route is the strongest Track 2 proof: it generates the
+strategy artifact server-side, attaches provenance, and returns validation
+results for the strategy contract. Judges can verify the project without relying
+on a browser copy/download action.
+
+The `/api/judge-report` route bundles the proof for fast review: live spec,
+controlled stress spec, CMC data provenance, validation results, safety
+boundaries, and the Risk Guard Case Library.
 
 ## Why It Matters
 
@@ -153,14 +165,16 @@ It does not:
 3. Show live CMC quote and Fear & Greed.
 4. Show RSI, MACD, EMA, and ATR calculated from live candles.
 5. Click Scenario A: Live Market Analysis.
-6. Explain how the decision, reasoning, and rules are derived from the live values on screen, and how the risk guard approves or blocks the setup depending on live conditions.
-7. Click Scenario B: Stress Test - Volatility Rejection (Fixture).
-8. Show the `WAIT` decision and blocked risk reasons.
-9. Scroll to Live Backtest Results.
-10. Compare strategy result against Buy & Hold.
-11. Scroll to Strategy Specification JSON.
-12. Copy or download the structured strategy spec.
-13. End with: no wallet, no live trading, no execution.
+6. Open `/api/strategy-spec?mode=live&timeframe=4H` and point to `validation.valid: true`.
+7. Explain how the decision, reasoning, and rules are derived from the live values on screen, and how the risk guard approves or blocks the setup depending on live conditions.
+8. Click Scenario B: Risk Guard Stress Test.
+9. Show the `WAIT` decision and blocked risk reasons.
+10. Open `/api/strategy-spec?mode=stress&timeframe=1H` and point to `riskGuard.status: BLOCKED`.
+11. Scroll to Live Backtest Results.
+12. Compare strategy result against Buy & Hold.
+13. Scroll to Strategy Specification JSON.
+14. Copy or download the structured strategy spec.
+15. End with: no wallet, no live trading, no execution.
 
 ## 60-Second Judge Script
 

@@ -25,6 +25,9 @@ export async function GET() {
     },
     routes: {
       dashboard: "/",
+      strategySpecLive: "/api/strategy-spec?mode=live&timeframe=4H",
+      strategySpecStress: "/api/strategy-spec?mode=stress&timeframe=1H",
+      judgeReport: "/api/judge-report",
       marketSnapshot: "/api/market-snapshot",
       technicalIndicators: "/api/technical-indicators?timeframe=4H",
       backtest: "/api/backtest?timeframe=4H",

@@ -251,6 +251,36 @@ export function buildStrategySpecification({
   usesLiveBacktestData?: boolean;
   generatedAt?: string;
 }): StrategySpecification {
+  const isControlledStressSpec = scenario.name.toLowerCase().includes("risk guard stress");
+  const dataSourceType =
+    usesLiveMarketData && usesLiveTechnicalData
+      ? usesLiveBacktestData
+        ? "coinmarketcap_rest_plus_live_indicators_and_backtest"
+        : "coinmarketcap_rest_plus_live_indicators"
+      : usesLiveMarketData
+        ? "coinmarketcap_rest_plus_fixture_indicators"
+        : usesLiveTechnicalData
+          ? usesLiveBacktestData
+            ? "fixture_market_plus_live_indicators_and_backtest"
+            : "fixture_market_plus_live_indicators"
+          : "mock_fixture";
+  const dataSourceNote =
+    isControlledStressSpec
+      ? usesLiveMarketData
+        ? "BNB quote, 24h change, and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA trend, ATR, and backtest values are controlled stress inputs used to prove risk-guard refusal behavior."
+        : "CMC quote and Fear & Greed are unavailable, so price and sentiment use a clearly labeled fallback while RSI, MACD, EMA trend, ATR, and backtest values remain controlled stress inputs for risk-guard refusal testing."
+      : usesLiveMarketData && usesLiveBacktestData
+      ? "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and the backtest are calculated from live candles. If CMC OHLCV is unavailable, candle-based calculations transparently use the public BNBUSDT fallback."
+      : usesLiveMarketData && usesLiveTechnicalData
+        ? "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, and ATR are calculated from live candles. Backtest values are using fixture fallback."
+        : usesLiveMarketData
+          ? "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and backtest values are using fixture fallback."
+          : usesLiveBacktestData
+            ? "CMC quote and Fear & Greed are unavailable, so market context starts from a labeled fixture while indicators and backtest are calculated from live candles."
+            : usesLiveTechnicalData
+              ? "CMC quote and Fear & Greed are unavailable, so market context starts from a labeled fixture while indicators are calculated from live candles."
+              : "This run uses local fixture data because live market or candle data is unavailable.";
+
   return {
     specVersion: "0.3.0-live-strategy",
     product: "Sentinel Alpha Skill",
@@ -320,23 +350,11 @@ export function buildStrategySpecification({
       "Market and backtest outputs are for strategy testing only."
     ],
     dataSource: {
-      type: usesLiveTechnicalData
-        ? usesLiveBacktestData
-          ? "coinmarketcap_rest_plus_live_indicators_and_backtest"
-          : "coinmarketcap_rest_plus_live_indicators"
-        : usesLiveMarketData
-          ? "coinmarketcap_rest_plus_fixture_indicators"
-          : "mock_fixture",
+      type: dataSourceType,
       marketData: usesLiveMarketData ? "coinmarketcap_rest" : "fixture",
       indicators: usesLiveTechnicalData ? "live_candles" : "fixture",
       backtest: usesLiveBacktestData ? "live_candles" : "fixture",
-      note: usesLiveBacktestData
-        ? "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and the backtest are calculated from live candles. If CMC OHLCV is unavailable, candle-based calculations transparently use the public BNBUSDT fallback."
-        : usesLiveTechnicalData
-          ? "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, and ATR are calculated from live candles. Backtest values are using fixture fallback."
-          : usesLiveMarketData
-            ? "BNB quote and Fear & Greed are loaded from CoinMarketCap REST API. RSI, MACD, EMA, ATR, and backtest values are using fixture fallback."
-            : "This run uses local fixture data because live market or candle data is unavailable."
+      note: dataSourceNote
     }
   };
 }

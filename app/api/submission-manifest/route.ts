@@ -35,6 +35,12 @@ export async function GET() {
     strategyOutputs: ["BUY", "WAIT", "EXIT"],
     generatedArtifact: {
       name: "Strategy Specification JSON",
+      judgeApi:
+        "/api/strategy-spec?mode=live&timeframe=4H returns a validated, server-generated Track 2 strategy spec.",
+      stressApi:
+        "/api/strategy-spec?mode=stress&timeframe=1H returns the controlled stress refusal spec.",
+      judgeReport:
+        "/api/judge-report returns the full judge-facing proof bundle: data provenance, validation, safety, and risk cases.",
       includes: [
         "market regime",
         "decision and confidence",
@@ -57,8 +63,11 @@ export async function GET() {
       "Open the dashboard",
       "Show the Live System Status tiles",
       "Show Scenario A: Live Market Analysis with live CMC market context",
-      "Click Scenario B: Stress Test - Volatility Rejection (Fixture)",
+      "Open /api/judge-report to show the proof bundle",
+      "Open /api/strategy-spec?mode=live&timeframe=4H to show the server-generated artifact",
+      "Click Scenario B: Risk Guard Stress Test",
       "Pause on Why The AI Refused",
+      "Open /api/strategy-spec?mode=stress&timeframe=1H to show the blocked strategy contract",
       "Show Live Backtest Results",
       "Copy or download Strategy Specification JSON",
       "Open skill/sentinel-alpha/SKILL.md to show the Track 2 LLM Skill artifact"

@@ -47,10 +47,10 @@ export const scenarios: Record<Scenario["id"], Scenario> = {
   },
   rejected: {
     id: "rejected",
-    name: "Scenario B: Stress Test - Volatility Rejection (Fixture)",
+    name: "Scenario B: Risk Guard Stress Test",
     shortName: "Volatility Rejection Stress Test",
     description:
-      "Deterministic fixture of a euphoric, overheated pump - the exact setup naive bots chase and the Risk Guard refuses.",
+      "Live CMC price and sentiment with controlled stress indicators - the exact setup naive bots chase and the Risk Guard refuses.",
     market: {
       asset: "BNB/USDT",
       currentPrice: 641.09,
@@ -90,4 +90,3 @@ export const scenarios: Record<Scenario["id"], Scenario> = {
     }
   }
 };
-

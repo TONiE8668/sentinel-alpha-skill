@@ -16,9 +16,11 @@ test("dashboard loads and demo controls respond", async ({ page }) => {
 
   await expect(page).toHaveTitle(/Sentinel Alpha Skill/);
   await expect(page.getByRole("heading", { name: "Sentinel Alpha Skill" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Run judge demo/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Run product walkthrough/i })).toBeVisible();
   await expect(page.getByText("Live System Status")).toBeVisible();
-  await expect(page.getByText("Strategy Specification JSON")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "CMC Data Proof" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Strategy Specification JSON" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Risk Guard Case Library" })).toBeVisible();
   await expect(
     page.getByText(/Unhandled Runtime Error|Build Error|Application error/i)
   ).toHaveCount(0);
@@ -26,6 +28,8 @@ test("dashboard loads and demo controls respond", async ({ page }) => {
   const rejectedScenarioButton = page.getByRole("button", { name: /Scenario B/i });
   await expect(rejectedScenarioButton).toBeVisible();
   await rejectedScenarioButton.click();
+  await expect(page.getByText("Live CMC + controlled stress inputs")).toBeVisible();
+  await expect(page.getByText(/Volatility Rejection \(Fixture\)/i)).toHaveCount(0);
   await expect(page.getByText("WAIT").first()).toBeVisible();
   await expect(page.getByText("Why The AI Refused")).toBeVisible();
   await expect(page.getByText("Unsafe setup rejected")).toBeVisible();

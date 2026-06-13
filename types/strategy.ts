@@ -204,6 +204,8 @@ export type StrategySpecification = {
   dataSource: {
     type:
       | "mock_fixture"
+      | "fixture_market_plus_live_indicators"
+      | "fixture_market_plus_live_indicators_and_backtest"
       | "coinmarketcap_rest_plus_fixture_indicators"
       | "coinmarketcap_rest_plus_live_indicators"
       | "coinmarketcap_rest_plus_live_indicators_and_backtest";
